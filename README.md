@@ -44,6 +44,11 @@ make dashboards-open  # open OpenSearch Dashboards in browser
 src/common/          Shared utilities — config, DynamoDB pool, S3, models, middleware
 ```
 
+## Configuration
+
+All settings are loaded from AWS Secrets Manager at Lambda cold-start via `src/common/config.get_settings()`.
+No environment variables are read in application code — only in `config.py` as fallbacks for local development.
+
 > **Docker env:** copy `docker/.env.sample` → `docker/.env` before starting services.
 
 ## Local Services
