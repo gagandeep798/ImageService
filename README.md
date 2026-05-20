@@ -15,3 +15,14 @@ Production-grade image upload service — AWS Lambda + S3 + DynamoDB.
 | AWS CLI | v2 | `brew install awscli` |
 
 **Dev tooling:** ruff (lint), mypy (type check), pytest + moto (tests).
+
+## Setup
+
+```bash
+# 1. Install dependencies
+make install
+
+# 2. Copy the local config template
+cp .env.local.template .env.local
+# Edit .env.local — AWS credentials are always "test" for LocalStack
+```
