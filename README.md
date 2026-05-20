@@ -44,6 +44,7 @@ make install   # install Python dependencies
 | LocalStack (AWS) | `http://localhost:8080/api/` |
 | OpenSearch | `http://localhost:8080/opensearch/` |
 | OpenSearch Dashboards | `http://localhost:8080/dashboards/` |
+| Nginx (reverse proxy) | host-exposed on `NGINX_PORT` (default 8080) |
 
 > **Nginx reverse proxy** — only Nginx exposes a host port. Upstream service ports are container-internal only. Security headers are applied to all responses. Custom error pages (no stack traces or version info) at `docker/nginx/error_pages/`. Upstream ports are injected via `envsubst` from `docker/nginx/templates/default.conf.template` at container start — all port values come from `docker/.env`.
 
