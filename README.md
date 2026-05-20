@@ -45,4 +45,6 @@ make install   # install Python dependencies
 | OpenSearch | `http://localhost:8080/opensearch/` |
 | OpenSearch Dashboards | `http://localhost:8080/dashboards/` |
 
+> **Nginx reverse proxy** — only Nginx exposes a host port. Upstream service ports are container-internal only. Security headers are applied to all responses.
+
 ImageService is a production-grade, Instagram-style image upload backend built on AWS Lambda, S3, and DynamoDB. It supports chunked multipart uploads, an async processing pipeline (AV scan → thumbnails), paginated listing with write-sharded DynamoDB GSIs, GDPR erasure, and full observability via CloudWatch, X-Ray, and OpenSearch.
