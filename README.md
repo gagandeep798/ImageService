@@ -28,3 +28,9 @@ cp .env.local.template .env.local
 ```
 
 **SAM deploy profiles** are configured in `samconfig.toml` for environments: `local`, `dev`, `staging`, `prod`.
+
+## Quick Start
+
+```bash
+make install   # install Python dependencies
+```
