@@ -13,3 +13,5 @@ Production-grade image upload service — AWS Lambda + S3 + DynamoDB.
 | Docker Desktop | 4.x | https://www.docker.com/products/docker-desktop |
 | AWS SAM CLI | latest | `brew install aws-sam-cli` |
 | AWS CLI | v2 | `brew install awscli` |
+
+**Dev tooling:** ruff (lint), mypy (type check), pytest + moto (tests).
