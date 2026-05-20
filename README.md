@@ -41,7 +41,7 @@ make dashboards-open  # open OpenSearch Dashboards in browser
 ## Project Layout
 
 ```
-src/                 Application source code
+src/common/          Shared utilities — config, DynamoDB pool, S3, models, middleware
 ```
 
 > **Docker env:** copy `docker/.env.sample` → `docker/.env` before starting services.
