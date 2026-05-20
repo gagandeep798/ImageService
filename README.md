@@ -32,7 +32,10 @@ cp .env.local.template .env.local
 ## Quick Start
 
 ```bash
-make install   # install Python dependencies
+make install          # install Python dependencies
+make localstack-up    # build custom images and start all services
+make localstack-down  # stop all services and remove volumes
+make dashboards-open  # open OpenSearch Dashboards in browser
 ```
 
 > **Docker env:** copy `docker/.env.sample` → `docker/.env` before starting services.
