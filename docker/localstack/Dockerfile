@@ -1,0 +1,4 @@
+FROM localstack/localstack:3.4@sha256:7eb3ac3e0e2e3e68a7838ee06e4c7a9e6b0a4d3e2f1c8b5a9d0e3f6c9b2a5d8e
+
+COPY scripts/init_localstack.sh /etc/localstack/init/ready.d/01_init.sh
+RUN chmod +x /etc/localstack/init/ready.d/01_init.sh
