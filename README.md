@@ -38,6 +38,12 @@ make localstack-down  # stop all services and remove volumes
 make dashboards-open  # open OpenSearch Dashboards in browser
 ```
 
+## Project Layout
+
+```
+src/                 Application source code
+```
+
 > **Docker env:** copy `docker/.env.sample` → `docker/.env` before starting services.
 
 ## Local Services
