@@ -52,6 +52,12 @@ DynamoDB uses three separate IAM roles (read/write/delete) assumed via STS for l
 Email addresses are stored only as Argon2id hashes — never plaintext.
 All API responses follow the envelope: `{"data": ..., "error": ..., "meta": {request_id, timestamp}}`.
 
+## Running Tests
+
+```bash
+make test-unit   # fast unit tests — no Docker required
+```
+
 > **Docker env:** copy `docker/.env.sample` → `docker/.env` before starting services.
 
 ## Local Services
