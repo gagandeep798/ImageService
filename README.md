@@ -43,5 +43,6 @@ make install   # install Python dependencies
 |---------|-----------------|
 | LocalStack (AWS) | `http://localhost:8080/api/` |
 | OpenSearch | `http://localhost:8080/opensearch/` |
+| OpenSearch Dashboards | `http://localhost:8080/dashboards/` |
 
 ImageService is a production-grade, Instagram-style image upload backend built on AWS Lambda, S3, and DynamoDB. It supports chunked multipart uploads, an async processing pipeline (AV scan → thumbnails), paginated listing with write-sharded DynamoDB GSIs, GDPR erasure, and full observability via CloudWatch, X-Ray, and OpenSearch.
