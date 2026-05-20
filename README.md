@@ -26,3 +26,5 @@ make install
 cp .env.local.template .env.local
 # Edit .env.local — AWS credentials are always "test" for LocalStack
 ```
+
+**SAM deploy profiles** are configured in `samconfig.toml` for environments: `local`, `dev`, `staging`, `prod`.
