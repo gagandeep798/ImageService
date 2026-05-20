@@ -48,6 +48,9 @@ src/common/          Shared utilities — config, DynamoDB pool, S3, models, mid
 
 All settings are loaded from AWS Secrets Manager at Lambda cold-start via `src/common/config.get_settings()`.
 No environment variables are read in application code — only in `config.py` as fallbacks for local development.
+DynamoDB uses three separate IAM roles (read/write/delete) assumed via STS for least-privilege access.
+Email addresses are stored only as Argon2id hashes — never plaintext.
+All API responses follow the envelope: `{"data": ..., "error": ..., "meta": {request_id, timestamp}}`.
 
 > **Docker env:** copy `docker/.env.sample` → `docker/.env` before starting services.
 
