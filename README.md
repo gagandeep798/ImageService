@@ -128,3 +128,16 @@ make deploy-prod      # same + manual GitHub approval gate
 make build      # sam build --use-container
 make start-api  # SAM local API on http://localhost:3000
 ```
+
+## CI/CD
+
+Every pull request runs a full CI pipeline before merging.
+**CI pipeline:**
+- Lint (ruff)
+- Type check (mypy)
+- Unit tests (≥80% coverage)
+- SAM build
+- Integration tests with LocalStack
+
+Merging to `main` automatically deploys to staging; production requires manual approval in GitHub.
+Deploy pipeline: staging → run migrations → smoke test /health → manual approval → prod.

@@ -1,0 +1,155 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.12"
+  DEPLOY_LOG_GROUP: /image-service/cicd/deploys
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.STAGING_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: pip install poetry==1.8.3
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Build
+        run: sam build --use-container
+
+      - name: Log deploy start
+        run: |
+          aws logs put-log-events \
+            --log-group-name "$DEPLOY_LOG_GROUP" \
+            --log-stream-name "staging" \
+            --log-events '[{"timestamp":'$(date +%s000)',"message":"{\"event\":\"deploy_started\",\"env\":\"staging\",\"git_sha\":\"${{ github.sha }}\",\"triggered_by\":\"github-actions\",\"workflow_run_id\":\"${{ github.run_id }}\"}"}]' \
+          2>/dev/null || true
+
+      - name: Deploy to Staging
+        run: sam deploy --config-env staging --no-fail-on-empty-changeset
+
+      - name: Run migrations (staging)
+        run: |
+          export DYNAMODB_ENDPOINT_URL=""
+          export ENV=staging
+          poetry run python migrations/runner.py --env staging
+
+      - name: Smoke test staging
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name image-service-staging \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          STATUS=$(curl -sf "${API_URL}/health" | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
+          test "$STATUS" = "healthy"
+
+      - name: Log deploy complete
+        if: success()
+        run: |
+          aws logs put-log-events \
+            --log-group-name "$DEPLOY_LOG_GROUP" \
+            --log-stream-name "staging" \
+            --log-events '[{"timestamp":'$(date +%s000)',"message":"{\"event\":\"deploy_completed\",\"env\":\"staging\",\"git_sha\":\"${{ github.sha }}\",\"status\":\"success\"}"}]' \
+          2>/dev/null || true
+
+      - name: Log deploy failure
+        if: failure()
+        run: |
+          aws logs put-log-events \
+            --log-group-name "$DEPLOY_LOG_GROUP" \
+            --log-stream-name "staging" \
+            --log-events '[{"timestamp":'$(date +%s000)',"message":"{\"event\":\"deploy_completed\",\"env\":\"staging\",\"git_sha\":\"${{ github.sha }}\",\"status\":\"failed\"}"}]' \
+          2>/dev/null || true
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment: production  # GitHub Environment protection rule — requires manual approval
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.PROD_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: pip install poetry==1.8.3
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Build
+        run: sam build --use-container
+
+      - name: Log deploy start (prod)
+        run: |
+          aws logs put-log-events \
+            --log-group-name "$DEPLOY_LOG_GROUP" \
+            --log-stream-name "prod" \
+            --log-events '[{"timestamp":'$(date +%s000)',"message":"{\"event\":\"deploy_started\",\"env\":\"prod\",\"git_sha\":\"${{ github.sha }}\",\"approved_by\":\"${{ github.actor }}\"}"}]' \
+          2>/dev/null || true
+
+      - name: Deploy to Production
+        run: sam deploy --config-env prod --no-fail-on-empty-changeset
+
+      - name: Run migrations (prod)
+        run: |
+          export ENV=prod
+          poetry run python migrations/runner.py --env prod
+
+      - name: Smoke test production
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name image-service-prod \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text)
+          STATUS=$(curl -sf "${API_URL}/health" | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])")
+          test "$STATUS" = "healthy"
+
+      - name: Log prod deploy complete
+        if: always()
+        run: |
+          aws logs put-log-events \
+            --log-group-name "$DEPLOY_LOG_GROUP" \
+            --log-stream-name "prod" \
+            --log-events '[{"timestamp":'$(date +%s000)',"message":"{\"event\":\"deploy_completed\",\"env\":\"prod\",\"git_sha\":\"${{ github.sha }}\",\"status\":\"${{ job.status }}\"}"}]' \
+          2>/dev/null || true
