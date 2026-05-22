@@ -38,6 +38,28 @@ make localstack-down  # stop all services and remove volumes
 make dashboards-open  # open OpenSearch Dashboards in browser
 ```
 
+## Project Layout
+
+```
+src/common/          Shared utilities — config, DynamoDB pool, S3, models, middleware
+```
+
+## Configuration
+
+All settings are loaded from AWS Secrets Manager at Lambda cold-start via `src/common/config.get_settings()`.
+No environment variables are read in application code — only in `config.py` as fallbacks for local development.
+DynamoDB uses three separate IAM roles (read/write/delete) assumed via STS for least-privilege access.
+Email addresses are stored only as Argon2id hashes — never plaintext.
+All API responses follow the envelope: `{"data": ..., "error": ..., "meta": {request_id, timestamp}}`.
+
+## Running Tests
+
+```bash
+make test-unit   # fast unit tests — no Docker required
+```
+
+Unit tests use `moto` to mock all AWS services in-process. `TEST_SETTINGS` (in `tests/conftest.py`) is the single source of truth for all test configuration — no hardcoded strings in test files.
+
 > **Docker env:** copy `docker/.env.sample` → `docker/.env` before starting services.
 
 ## Local Services
