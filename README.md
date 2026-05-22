@@ -32,7 +32,23 @@ cp .env.local.template .env.local
 ## Quick Start
 
 ```bash
-make install   # install Python dependencies
+make install          # install Python dependencies
+make localstack-up    # build custom images and start all services
+make localstack-down  # stop all services and remove volumes
+make dashboards-open  # open OpenSearch Dashboards in browser
 ```
+
+> **Docker env:** copy `docker/.env.sample` → `docker/.env` before starting services.
+
+## Local Services
+
+| Service | Access via Nginx |
+|---------|-----------------|
+| LocalStack (AWS) | `http://localhost:8080/api/` |
+| OpenSearch | `http://localhost:8080/opensearch/` |
+| OpenSearch Dashboards | `http://localhost:8080/dashboards/` |
+| Nginx (reverse proxy) | host-exposed on `NGINX_PORT` (default 8080) |
+
+> **Nginx reverse proxy** — only Nginx exposes a host port. Upstream service ports are container-internal only. Security headers are applied to all responses. Custom error pages (no stack traces or version info) at `docker/nginx/error_pages/`. Upstream ports are injected via `envsubst` from `docker/nginx/templates/default.conf.template` at container start — all port values come from `docker/.env`.
 
 ImageService is a production-grade, Instagram-style image upload backend built on AWS Lambda, S3, and DynamoDB. It supports chunked multipart uploads, an async processing pipeline (AV scan → thumbnails), paginated listing with write-sharded DynamoDB GSIs, GDPR erasure, and full observability via CloudWatch, X-Ray, and OpenSearch.
