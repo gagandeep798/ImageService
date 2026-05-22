@@ -42,6 +42,24 @@ make dashboards-open  # open OpenSearch Dashboards in browser
 
 ```
 src/common/          Shared utilities — config, DynamoDB pool, S3, models, middleware
+src/repositories/    Data access — image, user, storage
+migrations/          DynamoDB schema migrations (applied before every deploy)
+```
+
+## Database Migrations
+
+DynamoDB schema changes are tracked in `migrations/` and applied before every deploy.
+
+| Migration | Description |
+|-----------|-------------|
+| 0001 | Create images table |
+| 0002 | Create users table with EmailHashIndex |
+| 0003 | Add UserImagesIndex and StatusIndex GSIs |
+| 0004 | Enable TTL on images and users tables |
+| 0005 | Backfill thumbnail_keys on existing records |
+
+```bash
+make migrate-local   # apply pending migrations to LocalStack
 ```
 
 ## Configuration
