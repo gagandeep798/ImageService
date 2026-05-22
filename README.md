@@ -141,3 +141,22 @@ Every pull request runs a full CI pipeline before merging.
 
 Merging to `main` automatically deploys to staging; production requires manual approval in GitHub.
 Deploy pipeline: staging → run migrations → smoke test /health → manual approval → prod.
+
+## Operational Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/init_localstack.sh` | Creates all AWS resources inside LocalStack at startup |
+| `scripts/fetch_secrets.sh` | Pulls Secrets Manager values → .env.secrets files |
+| `scripts/seed_data.py` | Seeds local DynamoDB with test users and images |
+
+```bash
+make install          # install Python dependencies
+make fetch-secrets    # pull secrets → .env.secrets + docker/.env.secrets
+make localstack-up    # start all services
+make seed             # seed test data
+make start-api        # SAM local API on http://localhost:3000
+```
+| `scripts/gdpr_erase_user.py` | Operator CLI for out-of-band GDPR erasure |
+
+make dashboards-open  # open OpenSearch Dashboards
