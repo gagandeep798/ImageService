@@ -76,7 +76,8 @@ All API responses follow the envelope: `{"data": ..., "error": ..., "meta": {req
 make test-unit   # fast unit tests — no Docker required
 ```
 
-Unit tests use `moto` to mock all AWS services in-process. `TEST_SETTINGS` (in `tests/conftest.py`) is the single source of truth for all test configuration — no hardcoded strings in test files.
+Unit tests use `moto` to mock all AWS services in-process. Handler tests cover all 17 Lambda functions.
+ `TEST_SETTINGS` (in `tests/conftest.py`) is the single source of truth for all test configuration — no hardcoded strings in test files.
 
 > **Docker env:** copy `docker/.env.sample` → `docker/.env` before starting services.
 
