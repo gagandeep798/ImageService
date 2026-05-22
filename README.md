@@ -160,3 +160,29 @@ make start-api        # SAM local API on http://localhost:3000
 | `scripts/gdpr_erase_user.py` | Operator CLI for out-of-band GDPR erasure |
 
 make dashboards-open  # open OpenSearch Dashboards
+
+## Documentation
+
+### Services
+| Doc | What it covers |
+|-----|----------------|
+| [Upload Service](docs/services/upload-service.md) | Chunked multipart upload flow, resume, abort |
+| [Image Service](docs/services/image-service.md) | Metadata CRUD, listing, download |
+| [User Service](docs/services/user-service.md) | User management, quota, PII hashing |
+| [Processing Pipeline](docs/services/processing-pipeline.md) | Finalize → scan → thumbnail generation |
+| [Observability](docs/services/observability.md) | Logs, metrics, tracing, CloudTrail, Athena, OpenSearch |
+| [Security](docs/services/security.md) | Auth, WAF, VPC, Secrets Manager, IAM, PII |
+| [Infrastructure](docs/services/infrastructure.md) | SAM template, DynamoDB schema, S3 buckets, SQS, Kinesis |
+
+### Activities
+| Doc | What it covers |
+|-----|----------------|
+| [Local Development](docs/activities/local-development.md) | First-time setup, running the stack, seeding data |
+| [Deploying](docs/activities/deploying.md) | Staging and production deploy workflow |
+| [Database Migrations](docs/activities/migrations.md) | Writing, applying, and rolling back DynamoDB migrations |
+| [Debugging with OpenSearch](docs/activities/debugging-with-opensearch.md) | Live log queries, index structure, common searches |
+| [GDPR Erasure](docs/activities/gdpr-erasure.md) | Handling right-to-erasure requests |
+| [Incident Response](docs/activities/incident-response.md) | Alert routing, runbook index, escalation path |
+
+### Runbooks
+`runbooks/` — operational incident response procedures for DLQ messages, DynamoDB throttling, Lambda errors, user quota, GDPR erasure, S3 replication lag, and OpenSearch log queries.
