@@ -93,3 +93,38 @@ Unit tests use `moto` to mock all AWS services in-process. Handler tests cover a
 > **Nginx reverse proxy** — only Nginx exposes a host port. Upstream service ports are container-internal only. Security headers are applied to all responses. Custom error pages (no stack traces or version info) at `docker/nginx/error_pages/`. Upstream ports are injected via `envsubst` from `docker/nginx/templates/default.conf.template` at container start — all port values come from `docker/.env`.
 
 ImageService is a production-grade, Instagram-style image upload backend built on AWS Lambda, S3, and DynamoDB. It supports chunked multipart uploads, an async processing pipeline (AV scan → thumbnails), paginated listing with write-sharded DynamoDB GSIs, GDPR erasure, and full observability via CloudWatch, X-Ray, and OpenSearch.
+
+## Infrastructure
+
+All AWS resources are defined in `template.yaml` (AWS SAM). Parameterised by `Env` (local/dev/staging/prod).
+**DynamoDB tables:** images (with UserImagesIndex + StatusIndex GSIs), users, migrations, secret-hashes — all with PITR and TTL.
+**S3 buckets:** originals (lifecycle: IA@30d, Glacier@180d, abort incomplete multipart@7d), thumbnails, quarantine (SSE-KMS), logs.
+**SQS queues:** FinalizeQueue → FinalizeDLQ, ScanQueue → ScanDLQ, ThumbnailQueue — all with DLQ redrive after 3 failures.
+**IAM roles:** DynamoDBReadRole (GetItem/Query/Scan), DynamoDBWriteRole (PutItem/UpdateItem), DynamoDBDeleteRole (UpdateItem restricted to soft-delete fields only).
+**Upload Lambda functions:** UploadInitiate, UploadPart, UploadComplete, UploadAbort, FinalizeUpload (SQS, 1024MB, 60s).
+**Processing Lambda functions:** ScanComplete, GenerateThumbnails (both SQS-triggered).
+**API Lambda functions:** GetImage, ListImages, DeleteImage, Download, Health (unauthenticated), GdprDeleteUser (300s timeout).
+**Operational Lambda functions:** LogShipper (Kinesis), SlackNotifier (SNS), ScaleLambda (EventBridge), BackupSecrets (daily cron).
+
+## Architecture
+
+```
+Client → API Gateway (WAF + JWT Authorizer) → Lambda → DynamoDB / S3
+                                                      → SQS → finalize → scan → thumbnails
+CloudFront ← S3 originals (OAC)
+Kinesis ← CloudWatch Logs → log_shipper Lambda → OpenSearch
+```
+**Observability:** CloudWatch alarms (per-service + composite), SNS alerts topic, CloudTrail with S3 data events, Athena workgroup with saved queries.
+
+## Deploy
+
+```bash
+make deploy-staging   # sam deploy → migrate → smoke test
+make deploy-prod      # same + manual GitHub approval gate
+```
+
+**Running locally:**
+```bash
+make build      # sam build --use-container
+make start-api  # SAM local API on http://localhost:3000
+```
