@@ -1,7 +1,7 @@
 .PHONY: install fetch-secrets docker-build localstack-up localstack-down \
         migrate-local migrate-staging migrate-dry-run \
         test-unit test-integration test lint format typecheck \
-        build start-api dashboards-open seed \
+        build start-api logs-list logs-tail seed \
         deploy-dev deploy-staging deploy-prod
 
 # Application env (table names, bucket prefixes, upload limits, etc.)
@@ -30,8 +30,13 @@ localstack-up: docker-build
 localstack-down:
 	docker compose -f docker/docker-compose.yml down -v
 
-dashboards-open:
-	open http://localhost:$(NGINX_PORT)/dashboards/
+logs-list:
+	awslocal logs describe-log-groups
+
+logs-tail:
+	awslocal logs filter-log-events \
+	  --log-group-name /aws/lambda/image-service-$(FUNCTION)-local \
+	  --start-time $$(( ($$(date +%s) - 300) * 1000 ))
 
 seed: localstack-up
 	poetry run python scripts/seed_data.py

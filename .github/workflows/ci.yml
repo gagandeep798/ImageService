@@ -78,10 +78,9 @@ jobs:
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
           AWS_DEFAULT_REGION: us-east-1
-          DYNAMODB_ENDPOINT_URL: http://localhost:8080/api
-          S3_ENDPOINT_URL: http://localhost:8080/api
-          SECRETSMANAGER_ENDPOINT_URL: http://localhost:8080/api
-          OPENSEARCH_ENDPOINT: http://localhost:8080/opensearch
+          DYNAMODB_ENDPOINT_URL: http://localhost:4566
+          S3_ENDPOINT_URL: http://localhost:4566
+          SECRETSMANAGER_ENDPOINT_URL: http://localhost:4566
           IMAGES_TABLE_NAME: image-service-images
           USERS_TABLE_NAME: image-service-users
           MIGRATIONS_TABLE_NAME: image-service-migrations

@@ -7,8 +7,8 @@ import os
 import boto3
 import pytest
 
-LOCALSTACK_ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT_URL", "http://localhost:8080/api")
-S3_ENDPOINT = os.environ.get("S3_ENDPOINT_URL", "http://localhost:8080/api")
+LOCALSTACK_ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT_URL", "http://localhost:4566")
+S3_ENDPOINT = os.environ.get("S3_ENDPOINT_URL", "http://localhost:4566")
 REGION = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
 
 _BOTO_KWARGS = dict(
@@ -38,7 +38,7 @@ def localstack_s3():
 
 @pytest.fixture(scope="session")
 def integration_settings():
-    """Settings pointing at LocalStack through Nginx."""
+    """Settings pointing at LocalStack."""
     from src.common.config import Settings
     return Settings(
         images_table_name=os.environ.get("IMAGES_TABLE_NAME", "image-service-images"),
@@ -65,7 +65,5 @@ def integration_settings():
         cloudfront_private_key_pem="LOCAL_DEV_NO_CLOUDFRONT",
         cloudfront_key_pair_id="LOCAL_DEV",
         slack_webhook_url="",
-        opensearch_endpoint=os.environ.get("OPENSEARCH_ENDPOINT", "http://localhost:8080/opensearch"),
-        opensearch_index_prefix="image-service",
         env="local",
     )
