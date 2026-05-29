@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENDPOINT="${AWS_ENDPOINT_URL:-}"
+ENDPOINT="${COGNITO_ENDPOINT_URL:-${AWS_ENDPOINT_URL:-}}"
 REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 APP_ENV="${APP_ENV:-local}"
 
@@ -22,9 +22,6 @@ if [ -n "$POOL_ID" ]; then
         --user-pool-id "$POOL_ID" \
         --client-name image-service-app \
         --no-generate-secret \
-        --explicit-auth-flows ALLOW_USER_SRP_AUTH ALLOW_REFRESH_TOKEN_AUTH \
-        --callback-urls "http://localhost:5173/callback" \
-        --logout-urls "http://localhost:5173/" \
         --region "$REGION" \
         --query 'UserPoolClient.ClientId' --output text 2>/dev/null || echo "")
 
