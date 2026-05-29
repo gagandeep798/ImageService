@@ -22,16 +22,16 @@ volumes:
 
 # Reusable env_file anchors ─────────────────────────────────────────────────
 x-docker-env: &docker-env
-  - path: docker/.env
+  - path: .env
     required: true
-  - path: docker/.env.secrets
+  - path: .env.secrets
     required: false   # populated by scripts/fetch_secrets.sh; not required for basic startup
 
 services:
 
   nginx:
     build:
-      context: .
+      context: ..
       dockerfile: docker/nginx/Dockerfile
     image: image-service-nginx:${NGINX_VERSION:-1.0.0}
     container_name: image-service-nginx
@@ -55,7 +55,7 @@ services:
 
   localstack:
     build:
-      context: .
+      context: ..
       dockerfile: docker/localstack/Dockerfile
     image: image-service-localstack:${LOCALSTACK_VERSION:-1.0.0}
     container_name: image-service-localstack
@@ -86,7 +86,7 @@ services:
 
   opensearch:
     build:
-      context: .
+      context: ..
       dockerfile: docker/opensearch/Dockerfile
     image: image-service-opensearch:${OPENSEARCH_VERSION:-1.0.0}
     container_name: image-service-opensearch
@@ -116,7 +116,7 @@ services:
 
   opensearch-dashboards:
     build:
-      context: .
+      context: ..
       dockerfile: docker/opensearch-dashboards/Dockerfile
     image: image-service-opensearch-dashboards:${OPENSEARCH_DASHBOARDS_VERSION:-1.0.0}
     container_name: image-service-opensearch-dashboards

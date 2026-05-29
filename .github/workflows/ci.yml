@@ -69,9 +69,9 @@ jobs:
       - name: Install dependencies
         run: poetry install
       - name: Build custom Docker images
-        run: docker compose build
+        run: docker compose -f docker/docker-compose.yml build
       - name: Start LocalStack + OpenSearch
-        run: docker compose up -d --wait
+        run: docker compose -f docker/docker-compose.yml up -d --wait
         timeout-minutes: 3
       - name: Run integration tests
         env:
@@ -91,7 +91,7 @@ jobs:
         run: poetry run pytest -m integration -v
       - name: Collect docker logs on failure
         if: failure()
-        run: docker compose logs
+        run: docker compose -f docker/docker-compose.yml logs
       - name: Tear down
         if: always()
-        run: docker compose down -v
+        run: docker compose -f docker/docker-compose.yml down -v

@@ -22,13 +22,13 @@ fetch-secrets:
 # ── Docker ────────────────────────────────────────────────────────────────────
 
 docker-build:
-	docker compose build
+	docker compose -f docker/docker-compose.yml build
 
 localstack-up: docker-build
-	docker compose up -d --wait
+	docker compose -f docker/docker-compose.yml up -d --wait
 
 localstack-down:
-	docker compose down -v
+	docker compose -f docker/docker-compose.yml down -v
 
 dashboards-open:
 	open http://localhost:$(NGINX_PORT)/dashboards/
