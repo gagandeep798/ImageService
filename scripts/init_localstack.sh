@@ -119,18 +119,11 @@ create_queue() {
 
 for q in image-service-finalize image-service-finalize-dlq \
           image-service-scan image-service-scan-dlq \
-          image-service-thumbnails image-service-log-shipper; do
+          image-service-thumbnails; do
     create_queue "$q"
 done
 
 log "SQS queues ready"
-
-# ── Kinesis Stream ────────────────────────────────────────────────────────────
-aws --endpoint-url="$ENDPOINT" kinesis create-stream \
-    --stream-name image-service-live-logs \
-    --shard-count 2 \
-    --region "$REGION" 2>/dev/null || true
-log "Kinesis stream ready"
 
 # ── Secrets Manager ───────────────────────────────────────────────────────────
 create_secret() {

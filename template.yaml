@@ -42,7 +42,6 @@ Globals:
         FINALIZE_QUEUE_URL: !Ref FinalizeQueue
         SCAN_QUEUE_URL: !Ref ScanQueue
         THUMBNAIL_QUEUE_URL: !Ref ThumbnailQueue
-        OPENSEARCH_INDEX_PREFIX: image-service
         DYNAMO_GSI2_SHARD_COUNT: "8"
         MAX_IMAGE_SIZE_BYTES: "20971520"
         CHUNK_SIZE_BYTES: "5242880"
@@ -762,19 +761,6 @@ Resources:
               Action: [secretsmanager:GetSecretValue]
               Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
-  LogShipperFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub "image-service-log-shipper-${Env}"
-      CodeUri: src/
-      Handler: handlers.log_shipper.handler
-      MemorySize: 256
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action: [kinesis:GetRecords, kinesis:GetShardIterator, kinesis:DescribeStream, kinesis:ListStreams]
-              Resource: !GetAtt LiveLogsStream.Arn
-
   SlackNotifierFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -881,15 +867,6 @@ Resources:
         RefreshToken: days
       AccessTokenValidity: 1
       RefreshTokenValidity: 30
-
-  # ── Kinesis ───────────────────────────────────────────────────────────────────
-
-  LiveLogsStream:
-    Type: AWS::Kinesis::Stream
-    Properties:
-      Name: !Sub "image-service-live-logs-${Env}"
-      ShardCount: 2
-      RetentionPeriodHours: 24
 
   # ── CloudWatch Log Groups ─────────────────────────────────────────────────────
 

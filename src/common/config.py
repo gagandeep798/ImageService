@@ -62,10 +62,6 @@ class Settings:
     # Alerts
     slack_webhook_url: str
 
-    # OpenSearch
-    opensearch_endpoint: str
-    opensearch_index_prefix: str
-
     # Env
     env: str
 
@@ -137,7 +133,5 @@ def get_settings() -> Settings:
         cloudfront_private_key_pem=cf_cfg.get("private_key_pem", ""),
         cloudfront_key_pair_id=cf_cfg.get("key_pair_id", ""),
         slack_webhook_url=alerts_cfg.get("slack_webhook", ""),
-        opensearch_endpoint=os.environ.get("OPENSEARCH_ENDPOINT", "http://localhost:9200"),
-        opensearch_index_prefix=os.environ.get("OPENSEARCH_INDEX_PREFIX", "image-service"),
         env=env,
     )
