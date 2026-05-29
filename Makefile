@@ -2,7 +2,9 @@
         migrate-local migrate-staging migrate-dry-run \
         test-unit test-integration test lint format typecheck \
         build start-api logs-list logs-tail seed \
-        deploy-dev deploy-staging deploy-prod
+        deploy-dev deploy-staging deploy-prod \
+        frontend-install frontend-dev frontend-build \
+        deploy-frontend-staging deploy-frontend-prod _frontend-sync
 
 # Application env (table names, bucket prefixes, upload limits, etc.)
 include .env
@@ -98,9 +100,54 @@ deploy-dev: build
 deploy-staging: build
 	sam deploy --config-env staging --no-fail-on-empty-changeset
 	poetry run python migrations/runner.py --env staging
+	$(MAKE) deploy-frontend-staging
 
 deploy-prod: build
 	@echo "Deploying to PRODUCTION. Ctrl-C to abort..."
 	@sleep 3
 	sam deploy --config-env prod --no-fail-on-empty-changeset
 	poetry run python migrations/runner.py --env prod
+	$(MAKE) deploy-frontend-prod
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+
+FRONTEND_DIR = frontend
+
+frontend-install:
+	cd $(FRONTEND_DIR) && npm install
+
+frontend-dev: frontend-install
+	cd $(FRONTEND_DIR) && npm run dev
+
+frontend-build: frontend-install
+	cd $(FRONTEND_DIR) && npm run build
+
+# Sync dist/ → S3. All assets: immutable cache (content-hashed names).
+# index.html: no-cache (always fresh — points to hashed assets).
+_frontend-sync:
+	$(AWS_CMD) s3 sync $(FRONTEND_DIR)/dist/ s3://$(FRONTEND_BUCKET)/ \
+	  --delete \
+	  --cache-control "max-age=31536000,immutable" \
+	  --exclude "index.html"
+	$(AWS_CMD) s3 cp $(FRONTEND_DIR)/dist/index.html s3://$(FRONTEND_BUCKET)/index.html \
+	  --cache-control "no-cache,no-store,must-revalidate"
+	$(AWS_CMD) cloudfront create-invalidation \
+	  --distribution-id $(CLOUDFRONT_DISTRIBUTION_ID) \
+	  --paths "/*"
+
+_stack_output = $(shell $(AWS_CMD) cloudformation describe-stacks \
+  --stack-name image-service-$(1) \
+  --query "Stacks[0].Outputs[?OutputKey=='$(2)'].OutputValue" \
+  --output text)
+
+deploy-frontend-staging: frontend-build
+	$(MAKE) _frontend-sync \
+	  FRONTEND_BUCKET=$(call _stack_output,staging,FrontendBucketName) \
+	  CLOUDFRONT_DISTRIBUTION_ID=$(call _stack_output,staging,CloudFrontDistributionId)
+
+deploy-frontend-prod: frontend-build
+	@echo "Deploying frontend to PRODUCTION. Ctrl-C to abort..."
+	@sleep 3
+	$(MAKE) _frontend-sync \
+	  FRONTEND_BUCKET=$(call _stack_output,prod,FrontendBucketName) \
+	  CLOUDFRONT_DISTRIBUTION_ID=$(call _stack_output,prod,CloudFrontDistributionId)

@@ -21,10 +21,14 @@ QUARANTINE="image-service-quarantine-${ACCOUNT}-${REGION}"
 LOGS="image-service-logs-${ACCOUNT}-${REGION}"
 CLOUDTRAIL_LOGS="image-service-cloudtrail-logs-${ACCOUNT}-${REGION}"
 BACKUPS="image-service-backups-${ACCOUNT}-${REGION}"
+FRONTEND="image-service-frontend-${ACCOUNT}-${REGION}"
 
-for bucket in "$ORIGINALS" "$THUMBNAILS" "$QUARANTINE" "$LOGS" "$CLOUDTRAIL_LOGS" "$BACKUPS"; do
+for bucket in "$ORIGINALS" "$THUMBNAILS" "$QUARANTINE" "$LOGS" "$CLOUDTRAIL_LOGS" "$BACKUPS" "$FRONTEND"; do
     create_bucket "$bucket"
 done
+
+aws_cmd s3api put-bucket-versioning --bucket "$FRONTEND" \
+    --versioning-configuration Status=Enabled 2>/dev/null || true
 
 # CORS for originals bucket (browser direct upload)
 aws_cmd s3api put-bucket-cors \

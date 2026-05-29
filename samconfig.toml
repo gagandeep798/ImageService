@@ -11,7 +11,7 @@ parameter_overrides = "Env=local LogLevel=DEBUG"
 stack_name = "image-service-dev"
 resolve_s3 = true
 region = "us-east-1"
-capabilities = "CAPABILITY_IAM"
+capabilities = "CAPABILITY_NAMED_IAM"
 parameter_overrides = "Env=dev LogLevel=DEBUG"
 
 [staging.deploy.parameters]
@@ -19,7 +19,7 @@ stack_name = "image-service-staging"
 s3_bucket = ""
 s3_prefix = "image-service-staging"
 region = "us-east-1"
-capabilities = "CAPABILITY_IAM"
+capabilities = "CAPABILITY_NAMED_IAM"
 confirm_changeset = false
 parameter_overrides = "Env=staging LogLevel=INFO"
 
@@ -28,7 +28,7 @@ stack_name = "image-service-prod"
 s3_bucket = ""
 s3_prefix = "image-service-prod"
 region = "us-east-1"
-capabilities = "CAPABILITY_IAM"
+capabilities = "CAPABILITY_NAMED_IAM"
 confirm_changeset = true
 fail_on_empty_changeset = false
 parameter_overrides = "Env=prod LogLevel=WARNING"
