@@ -35,7 +35,6 @@ cp .env.local.template .env.local
 make install          # install Python dependencies
 make localstack-up    # build custom images and start all services
 make localstack-down  # stop all services and remove volumes
-make dashboards-open  # open OpenSearch Dashboards in browser
 ```
 
 ## Project Layout
@@ -83,16 +82,13 @@ Unit tests use `moto` to mock all AWS services in-process. Handler tests cover a
 
 ## Local Services
 
-| Service | Access via Nginx |
-|---------|-----------------|
-| LocalStack (AWS) | `http://localhost:8080/api/` |
-| OpenSearch | `http://localhost:8080/opensearch/` |
-| OpenSearch Dashboards | `http://localhost:8080/dashboards/` |
-| Nginx (reverse proxy) | host-exposed on `NGINX_PORT` (default 8080) |
+| Service | URL |
+|---------|-----|
+| LocalStack (AWS) | `http://localhost:4566` |
 
-> **Nginx reverse proxy** — only Nginx exposes a host port. Upstream service ports are container-internal only. Security headers are applied to all responses. Custom error pages (no stack traces or version info) at `docker/nginx/error_pages/`. Upstream ports are injected via `envsubst` from `docker/nginx/templates/default.conf.template` at container start — all port values come from `docker/.env`.
+> **Docker env:** copy `docker/.env.sample` → `docker/.env` before starting services.
 
-ImageService is a production-grade, Instagram-style image upload backend built on AWS Lambda, S3, and DynamoDB. It supports chunked multipart uploads, an async processing pipeline (AV scan → thumbnails), paginated listing with write-sharded DynamoDB GSIs, GDPR erasure, and full observability via CloudWatch, X-Ray, and OpenSearch.
+ImageService is a production-grade, Instagram-style image upload backend built on AWS Lambda, S3, and DynamoDB. It supports chunked multipart uploads, an async processing pipeline (AV scan → thumbnails), paginated listing with write-sharded DynamoDB GSIs, GDPR erasure, and full observability via CloudWatch and X-Ray.
 
 ## Infrastructure
 
@@ -104,7 +100,7 @@ All AWS resources are defined in `template.yaml` (AWS SAM). Parameterised by `En
 **Upload Lambda functions:** UploadInitiate, UploadPart, UploadComplete, UploadAbort, FinalizeUpload (SQS, 1024MB, 60s).
 **Processing Lambda functions:** ScanComplete, GenerateThumbnails (both SQS-triggered).
 **API Lambda functions:** GetImage, ListImages, DeleteImage, Download, Health (unauthenticated), GdprDeleteUser (300s timeout).
-**Operational Lambda functions:** LogShipper (Kinesis), SlackNotifier (SNS), ScaleLambda (EventBridge), BackupSecrets (daily cron).
+**Operational Lambda functions:** SlackNotifier (SNS), ScaleLambda (EventBridge), BackupSecrets (daily cron).
 
 ## Architecture
 
@@ -112,7 +108,6 @@ All AWS resources are defined in `template.yaml` (AWS SAM). Parameterised by `En
 Client → API Gateway (WAF + JWT Authorizer) → Lambda → DynamoDB / S3
                                                       → SQS → finalize → scan → thumbnails
 CloudFront ← S3 originals (OAC)
-Kinesis ← CloudWatch Logs → log_shipper Lambda → OpenSearch
 ```
 **Observability:** CloudWatch alarms (per-service + composite), SNS alerts topic, CloudTrail with S3 data events, Athena workgroup with saved queries.
 
@@ -159,8 +154,6 @@ make start-api        # SAM local API on http://localhost:3000
 ```
 | `scripts/gdpr_erase_user.py` | Operator CLI for out-of-band GDPR erasure |
 
-make dashboards-open  # open OpenSearch Dashboards
-
 ## Documentation
 
 ### Services
@@ -170,7 +163,7 @@ make dashboards-open  # open OpenSearch Dashboards
 | [Image Service](docs/services/image-service.md) | Metadata CRUD, listing, download |
 | [User Service](docs/services/user-service.md) | User management, quota, PII hashing |
 | [Processing Pipeline](docs/services/processing-pipeline.md) | Finalize → scan → thumbnail generation |
-| [Observability](docs/services/observability.md) | Logs, metrics, tracing, CloudTrail, Athena, OpenSearch |
+| [Observability](docs/services/observability.md) | Logs, metrics, tracing, CloudTrail, Athena |
 | [Security](docs/services/security.md) | Auth, WAF, VPC, Secrets Manager, IAM, PII |
 | [Infrastructure](docs/services/infrastructure.md) | SAM template, DynamoDB schema, S3 buckets, SQS, Kinesis |
 
@@ -180,9 +173,8 @@ make dashboards-open  # open OpenSearch Dashboards
 | [Local Development](docs/activities/local-development.md) | First-time setup, running the stack, seeding data |
 | [Deploying](docs/activities/deploying.md) | Staging and production deploy workflow |
 | [Database Migrations](docs/activities/migrations.md) | Writing, applying, and rolling back DynamoDB migrations |
-| [Debugging with OpenSearch](docs/activities/debugging-with-opensearch.md) | Live log queries, index structure, common searches |
 | [GDPR Erasure](docs/activities/gdpr-erasure.md) | Handling right-to-erasure requests |
 | [Incident Response](docs/activities/incident-response.md) | Alert routing, runbook index, escalation path |
 
 ### Runbooks
-`runbooks/` — operational incident response procedures for DLQ messages, DynamoDB throttling, Lambda errors, user quota, GDPR erasure, S3 replication lag, and OpenSearch log queries.
+`runbooks/` — operational incident response procedures for DLQ messages, DynamoDB throttling, Lambda errors, user quota, GDPR erasure, and S3 replication lag.

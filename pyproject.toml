@@ -3,7 +3,6 @@ name = "image-service"
 version = "0.1.0"
 description = "Production-grade image upload service on AWS Lambda + S3 + DynamoDB"
 authors = ["gagandeep798"]
-python = "^3.12"
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -14,7 +13,6 @@ python-multipart = "^0.0.9"
 python-ulid = "^2.2"
 Pillow = "^10.3"
 argon2-cffi = "^23.1"
-opensearch-py = "^2.6"
 aioboto3 = "^13.0"
 cryptography = "^42.0"
 

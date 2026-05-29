@@ -8,6 +8,11 @@ docker/.env.secrets
 .aws-sam/
 samconfig.toml.bak
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -226,3 +231,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+.DS_Store
+*/.DS_Store

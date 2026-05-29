@@ -62,10 +62,6 @@ class Settings:
     # Alerts
     slack_webhook_url: str
 
-    # OpenSearch
-    opensearch_endpoint: str
-    opensearch_index_prefix: str
-
     # Env
     env: str
 
@@ -101,9 +97,10 @@ def get_settings() -> Settings:
     env = os.environ.get("ENV", "local")
     region = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
 
-    dynamo_endpoint = os.environ.get("DYNAMODB_ENDPOINT_URL") or None
-    s3_endpoint = os.environ.get("S3_ENDPOINT_URL") or None
-    sm_endpoint = os.environ.get("SECRETSMANAGER_ENDPOINT_URL") or None
+    _aws_endpoint = os.environ.get("AWS_ENDPOINT_URL") or None
+    dynamo_endpoint = os.environ.get("DYNAMODB_ENDPOINT_URL") or _aws_endpoint
+    s3_endpoint = os.environ.get("S3_ENDPOINT_URL") or _aws_endpoint
+    sm_endpoint = os.environ.get("SECRETSMANAGER_ENDPOINT_URL") or _aws_endpoint
 
     sm = _sm_client(sm_endpoint, region)
 
@@ -137,7 +134,5 @@ def get_settings() -> Settings:
         cloudfront_private_key_pem=cf_cfg.get("private_key_pem", ""),
         cloudfront_key_pair_id=cf_cfg.get("key_pair_id", ""),
         slack_webhook_url=alerts_cfg.get("slack_webhook", ""),
-        opensearch_endpoint=os.environ.get("OPENSEARCH_ENDPOINT", "http://localhost:9200"),
-        opensearch_index_prefix=os.environ.get("OPENSEARCH_INDEX_PREFIX", "image-service"),
         env=env,
     )
