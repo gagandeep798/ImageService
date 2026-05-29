@@ -114,13 +114,14 @@ deploy-prod: build
 FRONTEND_DIR = frontend
 
 frontend-install:
-	cd $(FRONTEND_DIR) && npm install
+	docker compose -f docker/docker-compose.yml run --rm frontend npm install
 
-frontend-dev: frontend-install
-	cd $(FRONTEND_DIR) && npm run dev
+frontend-dev:
+	docker compose -f docker/docker-compose.yml up frontend
 
-frontend-build: frontend-install
-	cd $(FRONTEND_DIR) && npm run build
+frontend-build:
+	docker compose -f docker/docker-compose.yml run --rm frontend \
+	  sh -c "npm install && npm run build"
 
 # Sync dist/ → S3. All assets: immutable cache (content-hashed names).
 # index.html: no-cache (always fresh — points to hashed assets).
