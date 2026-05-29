@@ -3,7 +3,6 @@ name = "image-service"
 version = "0.1.0"
 description = "Production-grade image upload service on AWS Lambda + S3 + DynamoDB"
 authors = ["gagandeep798"]
-python = "^3.12"
 
 [tool.poetry.dependencies]
 python = "^3.12"
