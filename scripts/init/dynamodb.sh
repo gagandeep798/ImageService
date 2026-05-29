@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENDPOINT="http://localhost:4566"
+ENDPOINT="${AWS_ENDPOINT_URL:-}"
 REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 
 log() { echo "[init:dynamodb] $*"; }
 
+aws_cmd() { [ -n "$ENDPOINT" ] && aws --endpoint-url="$ENDPOINT" "$@" || aws "$@"; }
+
 create_table() {
     local name="$1"
     shift
-    aws --endpoint-url="$ENDPOINT" dynamodb create-table \
+    aws_cmd dynamodb create-table \
         --table-name "$name" \
         --region "$REGION" \
         "$@" 2>/dev/null || true

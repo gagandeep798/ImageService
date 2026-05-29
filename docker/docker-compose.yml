@@ -38,6 +38,8 @@ services:
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
       LOCALSTACK_ACCOUNT_ID: ${LOCALSTACK_ACCOUNT_ID:-000000000000}
       GATEWAY_LISTEN: "0.0.0.0:${LOCALSTACK_PORT:-4566}"
+      AWS_ENDPOINT_URL: "http://localhost:${LOCALSTACK_PORT:-4566}"
+      APP_ENV: local
     volumes:
       - localstack_data:/var/lib/localstack
       - /var/run/docker.sock:/var/run/docker.sock

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Orchestrator — runs each service-level init script in dependency order.
-# Mounted into LocalStack at /etc/localstack/init/ready.d/01_init.sh
-# and executed automatically once LocalStack is healthy.
+# Works against LocalStack (set AWS_ENDPOINT_URL=http://localhost:4566) or real AWS (unset).
+# When mounted into LocalStack via ready.d, INIT_DIR defaults to /opt/localstack-init.
 set -euo pipefail
 
-INIT_DIR="/opt/localstack-init"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INIT_DIR="${INIT_DIR:-$SCRIPT_DIR}"
 
 bash "$INIT_DIR/vpc.sh"
 bash "$INIT_DIR/s3.sh"

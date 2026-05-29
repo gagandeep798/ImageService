@@ -6,9 +6,14 @@
 
 # Application env (table names, bucket prefixes, upload limits, etc.)
 include .env
-# Docker env (image versions, port mappings) — needed for dashboards-open target
+# Docker env (image versions, port mappings)
 include docker/.env
+# Local overrides (credentials, AWS_ENDPOINT_URL) — not committed
+-include .env.local
 export
+
+# AWS CLI with optional endpoint — set AWS_ENDPOINT_URL for LocalStack, unset for real AWS
+AWS_CMD = aws$(if $(AWS_ENDPOINT_URL), --endpoint-url=$(AWS_ENDPOINT_URL),)
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
 
@@ -31,11 +36,11 @@ localstack-down:
 	docker compose -f docker/docker-compose.yml down -v
 
 logs-list:
-	awslocal logs describe-log-groups
+	$(AWS_CMD) logs describe-log-groups
 
 logs-tail:
-	awslocal logs filter-log-events \
-	  --log-group-name /aws/lambda/image-service-$(FUNCTION)-local \
+	$(AWS_CMD) logs filter-log-events \
+	  --log-group-name /aws/lambda/image-service-$(FUNCTION)-$(APP_ENV) \
 	  --start-time $$(( ($$(date +%s) - 300) * 1000 ))
 
 seed: localstack-up
@@ -44,7 +49,7 @@ seed: localstack-up
 # ── Migrations ────────────────────────────────────────────────────────────────
 
 migrate-local: localstack-up
-	ENV=local poetry run python migrations/runner.py --env local
+	poetry run python migrations/runner.py --env local
 
 migrate-staging:
 	poetry run python migrations/runner.py --env staging

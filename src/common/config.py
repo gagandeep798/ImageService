@@ -97,9 +97,10 @@ def get_settings() -> Settings:
     env = os.environ.get("ENV", "local")
     region = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
 
-    dynamo_endpoint = os.environ.get("DYNAMODB_ENDPOINT_URL") or None
-    s3_endpoint = os.environ.get("S3_ENDPOINT_URL") or None
-    sm_endpoint = os.environ.get("SECRETSMANAGER_ENDPOINT_URL") or None
+    _aws_endpoint = os.environ.get("AWS_ENDPOINT_URL") or None
+    dynamo_endpoint = os.environ.get("DYNAMODB_ENDPOINT_URL") or _aws_endpoint
+    s3_endpoint = os.environ.get("S3_ENDPOINT_URL") or _aws_endpoint
+    sm_endpoint = os.environ.get("SECRETSMANAGER_ENDPOINT_URL") or _aws_endpoint
 
     sm = _sm_client(sm_endpoint, region)
 

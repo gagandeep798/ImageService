@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENDPOINT="http://localhost:4566"
+ENDPOINT="${AWS_ENDPOINT_URL:-}"
 REGION="${AWS_DEFAULT_REGION:-us-east-1}"
-ACCOUNT="${LOCALSTACK_ACCOUNT_ID:-000000000000}"
+ACCOUNT="${AWS_ACCOUNT_ID:-${LOCALSTACK_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text 2>/dev/null || echo "000000000000")}}"
 
 log() { echo "[init:secrets] $*"; }
+
+aws_cmd() { [ -n "$ENDPOINT" ] && aws --endpoint-url="$ENDPOINT" "$@" || aws "$@"; }
 
 create_secret() {
     local name="$1"
     local value="$2"
-    aws --endpoint-url="$ENDPOINT" secretsmanager create-secret \
+    aws_cmd secretsmanager create-secret \
         --name "$name" \
         --secret-string "$value" \
         --region "$REGION" 2>/dev/null || true

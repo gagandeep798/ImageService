@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENDPOINT="http://localhost:4566"
+ENDPOINT="${AWS_ENDPOINT_URL:-}"
 REGION="${AWS_DEFAULT_REGION:-us-east-1}"
-ACCOUNT="${LOCALSTACK_ACCOUNT_ID:-000000000000}"
+ACCOUNT="${AWS_ACCOUNT_ID:-${LOCALSTACK_ACCOUNT_ID:-$(aws sts get-caller-identity --query Account --output text 2>/dev/null || echo "000000000000")}}"
 
 log() { echo "[init:s3] $*"; }
 
+aws_cmd() { [ -n "$ENDPOINT" ] && aws --endpoint-url="$ENDPOINT" "$@" || aws "$@"; }
+
 create_bucket() {
     local name="$1"
-    aws --endpoint-url="$ENDPOINT" s3 mb "s3://$name" --region "$REGION" 2>/dev/null || true
+    aws_cmd s3 mb "s3://$name" --region "$REGION" 2>/dev/null || true
     log "bucket: $name"
 }
 
@@ -25,7 +27,7 @@ for bucket in "$ORIGINALS" "$THUMBNAILS" "$QUARANTINE" "$LOGS" "$CLOUDTRAIL_LOGS
 done
 
 # CORS for originals bucket (browser direct upload)
-aws --endpoint-url="$ENDPOINT" s3api put-bucket-cors \
+aws_cmd s3api put-bucket-cors \
     --bucket "$ORIGINALS" \
     --cors-configuration '{
         "CORSRules": [{

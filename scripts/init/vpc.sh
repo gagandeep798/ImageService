@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ENDPOINT="http://localhost:4566"
+ENDPOINT="${AWS_ENDPOINT_URL:-}"
 REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 
 log() { echo "[init:vpc] $*"; }
 
+aws_cmd() { [ -n "$ENDPOINT" ] && aws --endpoint-url="$ENDPOINT" "$@" || aws "$@"; }
+
 # ── VPC ───────────────────────────────────────────────────────────────────────
-VPC_ID=$(aws --endpoint-url="$ENDPOINT" ec2 create-vpc \
+VPC_ID=$(aws_cmd ec2 create-vpc \
     --cidr-block 10.0.0.0/16 \
     --region "$REGION" \
     --query 'Vpc.VpcId' --output text 2>/dev/null || echo "")
@@ -17,7 +19,7 @@ if [ -z "$VPC_ID" ]; then
     exit 0
 fi
 
-aws --endpoint-url="$ENDPOINT" ec2 create-tags \
+aws_cmd ec2 create-tags \
     --resources "$VPC_ID" \
     --tags Key=Name,Value=image-service-vpc \
     --region "$REGION" 2>/dev/null || true
@@ -28,14 +30,14 @@ log "VPC: $VPC_ID"
 create_subnet() {
     local cidr="$1" az="$2" name="$3"
     local id
-    id=$(aws --endpoint-url="$ENDPOINT" ec2 create-subnet \
+    id=$(aws_cmd ec2 create-subnet \
         --vpc-id "$VPC_ID" \
         --cidr-block "$cidr" \
         --availability-zone "${REGION}${az}" \
         --region "$REGION" \
         --query 'Subnet.SubnetId' --output text 2>/dev/null || echo "")
     if [ -n "$id" ]; then
-        aws --endpoint-url="$ENDPOINT" ec2 create-tags \
+        aws_cmd ec2 create-tags \
             --resources "$id" \
             --tags Key=Name,Value="$name" \
             --region "$REGION" 2>/dev/null || true
@@ -54,7 +56,7 @@ log "subnets ready"
 create_sg() {
     local name="$1" desc="$2"
     local id
-    id=$(aws --endpoint-url="$ENDPOINT" ec2 create-security-group \
+    id=$(aws_cmd ec2 create-security-group \
         --group-name "$name" \
         --description "$desc" \
         --vpc-id "$VPC_ID" \
@@ -66,7 +68,7 @@ create_sg() {
 # Lambda SG — egress-only (outbound to AWS service endpoints)
 LAMBDA_SG=$(create_sg "image-service-lambda-sg" "Lambda functions — egress only")
 if [ -n "$LAMBDA_SG" ]; then
-    aws --endpoint-url="$ENDPOINT" ec2 authorize-security-group-egress \
+    aws_cmd ec2 authorize-security-group-egress \
         --group-id "$LAMBDA_SG" \
         --protocol -1 \
         --cidr 0.0.0.0/0 \
@@ -77,7 +79,7 @@ fi
 # API Gateway SG — ingress HTTPS from internet
 API_GW_SG=$(create_sg "image-service-api-gw-sg" "API Gateway — ingress 443")
 if [ -n "$API_GW_SG" ]; then
-    aws --endpoint-url="$ENDPOINT" ec2 authorize-security-group-ingress \
+    aws_cmd ec2 authorize-security-group-ingress \
         --group-id "$API_GW_SG" \
         --protocol tcp \
         --port 443 \
@@ -89,7 +91,7 @@ fi
 # Secrets Manager VPC endpoint SG — ingress 443 from Lambda SG
 SM_ENDPOINT_SG=$(create_sg "image-service-secretsmanager-endpoint-sg" "Secrets Manager VPC endpoint")
 if [ -n "$SM_ENDPOINT_SG" ] && [ -n "$LAMBDA_SG" ]; then
-    aws --endpoint-url="$ENDPOINT" ec2 authorize-security-group-ingress \
+    aws_cmd ec2 authorize-security-group-ingress \
         --group-id "$SM_ENDPOINT_SG" \
         --protocol tcp \
         --port 443 \
@@ -101,7 +103,7 @@ fi
 # SQS VPC endpoint SG — ingress 443 from Lambda SG
 SQS_ENDPOINT_SG=$(create_sg "image-service-sqs-endpoint-sg" "SQS VPC endpoint")
 if [ -n "$SQS_ENDPOINT_SG" ] && [ -n "$LAMBDA_SG" ]; then
-    aws --endpoint-url="$ENDPOINT" ec2 authorize-security-group-ingress \
+    aws_cmd ec2 authorize-security-group-ingress \
         --group-id "$SQS_ENDPOINT_SG" \
         --protocol tcp \
         --port 443 \
