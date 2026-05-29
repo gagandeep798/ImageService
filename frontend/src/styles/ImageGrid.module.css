@@ -1,0 +1,29 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.loadMore { text-align: center; margin-top: 24px; }
+
+.loadMoreBtn {
+  padding: 8px 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: var(--color-surface);
+}
+
+.empty {
+  text-align: center;
+  padding: 64px;
+  color: var(--color-text-muted);
+}
+
+.loading {
+  text-align: center;
+  padding: 32px;
+  color: var(--color-text-muted);
+}
+
+.error { color: var(--color-error); padding: 16px; }
