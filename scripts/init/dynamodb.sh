@@ -37,19 +37,15 @@ create_table "image-service-images" \
     ]' \
     --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES
 
-# users table
+# users table — credentials owned by Cognito; this table stores profile/quota only
 create_table "image-service-users" \
     --attribute-definitions \
         AttributeName=PK,AttributeType=S \
         AttributeName=SK,AttributeType=S \
-        AttributeName=EmailHashIndex_PK,AttributeType=S \
     --key-schema \
         AttributeName=PK,KeyType=HASH \
         AttributeName=SK,KeyType=RANGE \
     --billing-mode PAY_PER_REQUEST \
-    --global-secondary-indexes '[
-        {"IndexName":"EmailHashIndex","KeySchema":[{"AttributeName":"EmailHashIndex_PK","KeyType":"HASH"}],"Projection":{"ProjectionType":"KEYS_ONLY"}}
-    ]' \
     --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES
 
 # migrations tracking table
