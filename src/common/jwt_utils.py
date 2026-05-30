@@ -1,7 +1,7 @@
 """JWT issuance and validation for DynamoDB-native auth."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import jwt as pyjwt
 
@@ -9,7 +9,7 @@ from src.common.config import Settings
 
 
 def issue_access_token(settings: Settings, user_id: str, is_admin: bool = False) -> str:
-    now = int(datetime.now(timezone.utc).timestamp())
+    now = int(datetime.now(UTC).timestamp())
     return pyjwt.encode(
         {
             "sub": user_id,
@@ -24,7 +24,7 @@ def issue_access_token(settings: Settings, user_id: str, is_admin: bool = False)
 
 
 def issue_refresh_token(settings: Settings, user_id: str) -> str:
-    now = int(datetime.now(timezone.utc).timestamp())
+    now = int(datetime.now(UTC).timestamp())
     return pyjwt.encode(
         {
             "sub": user_id,

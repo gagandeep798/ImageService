@@ -47,7 +47,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
                 metrics.add_metric(name="scan.clean", unit=MetricUnit.Count, value=1)
                 logger.info("image_activated", image_id=image_id)
 
-        except Exception as exc:
+        except Exception:
             logger.exception("Failed to process scan result", image_id=image_id)
             raise  # SQS retries
 

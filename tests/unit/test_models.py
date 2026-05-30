@@ -3,13 +3,10 @@ import pytest
 from pydantic import ValidationError
 
 from src.common.models import (
-    ImageRecord,
     ImageResponse,
-    ListImagesResponse,
     PartRecord,
     UploadCompleteRequest,
     UploadInitiateRequest,
-    UploadPartRequest,
     UserRecord,
 )
 

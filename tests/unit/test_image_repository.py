@@ -81,7 +81,7 @@ def test_gsi2_sharding_distributes_keys(mock_settings: Settings):
 def test_gsi2_all_shards_returns_correct_count(mock_settings: Settings):
     shards = gsi2_pk_all_shards("ACTIVE", mock_settings.gsi2_shard_count)
     assert len(shards) == mock_settings.gsi2_shard_count
-    assert f"STATUS#ACTIVE#0" in shards
+    assert "STATUS#ACTIVE#0" in shards
     assert f"STATUS#ACTIVE#{mock_settings.gsi2_shard_count - 1}" in shards
 
 

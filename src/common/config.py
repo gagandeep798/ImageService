@@ -8,7 +8,6 @@ import base64
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -17,7 +16,7 @@ class Settings:
     images_table_name: str
     users_table_name: str
     migrations_table_name: str
-    dynamodb_endpoint_url: Optional[str]
+    dynamodb_endpoint_url: str | None
     aws_region: str
 
     # S3
@@ -25,7 +24,7 @@ class Settings:
     thumbnails_bucket: str
     quarantine_bucket: str
     logs_bucket: str
-    s3_endpoint_url: Optional[str]
+    s3_endpoint_url: str | None
 
     # Upload
     max_image_size_bytes: int
@@ -34,9 +33,9 @@ class Settings:
     download_url_ttl_seconds: int
 
     # DynamoDB IAM role ARNs (optional — falls back to Lambda execution role when empty)
-    dynamo_read_role_arn: Optional[str]
-    dynamo_write_role_arn: Optional[str]
-    dynamo_delete_role_arn: Optional[str]
+    dynamo_read_role_arn: str | None
+    dynamo_write_role_arn: str | None
+    dynamo_delete_role_arn: str | None
 
     # DynamoDB sharding
     gsi2_shard_count: int

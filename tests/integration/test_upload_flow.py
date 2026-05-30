@@ -45,8 +45,9 @@ def test_full_upload_flow(integration_settings):
     assert image.status == "PENDING"
 
     # 3. Upload a part (small test data — LocalStack accepts any size)
-    import boto3
     import io
+
+    import boto3
     s3_client = boto3.client(
         "s3",
         endpoint_url=settings.s3_endpoint_url,

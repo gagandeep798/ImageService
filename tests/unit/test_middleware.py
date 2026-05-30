@@ -1,8 +1,8 @@
 """Unit tests for middleware helpers."""
 import pytest
 
-from src.common.exceptions import ForbiddenError
 from src.common import middleware
+from src.common.exceptions import ForbiddenError
 
 pytestmark = pytest.mark.unit
 

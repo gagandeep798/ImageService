@@ -4,7 +4,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac as _hmac
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
@@ -19,11 +19,11 @@ _ph = PasswordHasher()
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _ttl_90_days() -> int:
-    return int(datetime.now(timezone.utc).timestamp()) + 90 * 86400
+    return int(datetime.now(UTC).timestamp()) + 90 * 86400
 
 
 def _email_index_key(email: str, pepper: str) -> str:
@@ -189,7 +189,7 @@ def soft_delete_user(settings: Settings, user_id: str, gdpr: bool = False) -> No
     resource = get_delete_resource(settings)
     table = _table(resource, settings)
     now = _now()
-    ttl = _ttl_90_days() if gdpr else int(datetime.now(timezone.utc).timestamp()) + 7 * 86400
+    ttl = _ttl_90_days() if gdpr else int(datetime.now(UTC).timestamp()) + 7 * 86400
 
     update_expr = "SET #s = :deleted, deleted_at = :now, #ttl = :ttl, updated_at = :now"
     attr_values: dict = {

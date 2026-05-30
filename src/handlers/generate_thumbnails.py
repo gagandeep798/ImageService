@@ -68,7 +68,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
             img_repo.update_thumbnail_keys(settings, image_id, thumbnail_keys)
             logger.info("thumbnails_generated", image_id=image_id, variants=list(thumbnail_keys.keys()))
 
-        except Exception as exc:
+        except Exception:
             logger.exception("Failed to generate thumbnails", image_id=image_id)
             raise
 

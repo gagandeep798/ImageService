@@ -1,5 +1,4 @@
 """Unit tests for download handler — GET /images/{id}/download."""
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest

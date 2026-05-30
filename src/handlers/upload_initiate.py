@@ -11,11 +11,11 @@ from aws_lambda_powertools.metrics import MetricUnit
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from ulid import ULID
 
+from src.common import response as resp
 from src.common.config import get_settings
 from src.common.exceptions import ImageServiceError, ValidationError
 from src.common.middleware import get_caller_user_id, get_request_id
 from src.common.models import UploadInitiateRequest
-from src.common import response as resp
 from src.repositories import image_repository as img_repo
 from src.repositories import storage_repository as store_repo
 from src.repositories import user_repository as user_repo

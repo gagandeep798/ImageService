@@ -12,7 +12,6 @@ Re-raises exceptions so the SQS trigger retries failed records (up to
 """
 import io
 import json
-from typing import Optional
 
 from aws_lambda_powertools import Logger, Metrics, Tracer
 from aws_lambda_powertools.metrics import MetricUnit
@@ -20,7 +19,6 @@ from aws_lambda_powertools.utilities.typing import LambdaContext
 from PIL import Image
 
 from src.common.config import get_settings
-from src.common import response as resp
 from src.repositories import image_repository as img_repo
 from src.repositories import storage_repository as store_repo
 from src.repositories import user_repository as user_repo
@@ -30,7 +28,7 @@ tracer = Tracer(service="image-service")
 metrics = Metrics(namespace="ImageService")
 
 
-def _extract_dimensions(data: bytes) -> tuple[Optional[int], Optional[int]]:
+def _extract_dimensions(data: bytes) -> tuple[int | None, int | None]:
     """Extract (width, height) from raw image bytes using Pillow.  Returns (None, None) on failure."""
     try:
         img = Image.open(io.BytesIO(data))
@@ -39,7 +37,7 @@ def _extract_dimensions(data: bytes) -> tuple[Optional[int], Optional[int]]:
         return None, None
 
 
-def _parse_image_id_from_key(s3_key: str) -> Optional[str]:
+def _parse_image_id_from_key(s3_key: str) -> str | None:
     """Extract the image_id segment from the canonical S3 key pattern.
 
     Key pattern: ``originals/{user_id}/{year}/{month}/{image_id}/{filename}``

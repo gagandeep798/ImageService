@@ -7,7 +7,8 @@ import jwt as pyjwt
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
-from src.common import jwt_utils, response as resp
+from src.common import jwt_utils
+from src.common import response as resp
 from src.common.config import get_settings
 from src.common.exceptions import ImageServiceError, ValidationError
 from src.common.middleware import get_request_id

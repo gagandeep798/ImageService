@@ -19,11 +19,10 @@ from __future__ import annotations
 
 import base64
 import json
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
-from boto3.resources.base import ServiceResource
 from boto3.dynamodb.conditions import Key
+from boto3.resources.base import ServiceResource
 
 from src.common.config import Settings
 from src.common.dynamo import (
@@ -40,12 +39,12 @@ from src.common.models import ImageRecord, ImageResponse, ListImagesResponse
 
 def _now() -> str:
     """Return the current UTC timestamp as an ISO-8601 string."""
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _ttl_7_days() -> int:
     """Return a Unix epoch 7 days from now for DynamoDB TTL on soft-deleted images."""
-    return int(datetime.now(timezone.utc).timestamp()) + 7 * 86400
+    return int(datetime.now(UTC).timestamp()) + 7 * 86400
 
 
 def _table(resource: ServiceResource, settings: Settings):  # type: ignore[return]
@@ -62,8 +61,8 @@ def create_pending(
     s3_key: str,
     upload_id: str,
     content_type: str,
-    title: Optional[str],
-    description: Optional[str],
+    title: str | None,
+    description: str | None,
     tags: list[str],
 ) -> None:
     """Write a new image record in PENDING status after the multipart upload is initiated.
@@ -121,7 +120,7 @@ def record_part(settings: Settings, image_id: str, part_number: int, etag: str) 
         )
 
 
-def set_status(settings: Settings, image_id: str, status: str, extra: Optional[dict] = None) -> None:
+def set_status(settings: Settings, image_id: str, status: str, extra: dict | None = None) -> None:
     """Transition an image to a new status, updating the GSI2PK shard key accordingly.
 
     ``extra`` can contain additional attribute updates (e.g., ``size_bytes``,
@@ -189,8 +188,8 @@ def update_after_finalize(
     settings: Settings,
     image_id: str,
     size_bytes: int,
-    width: Optional[int],
-    height: Optional[int],
+    width: int | None,
+    height: int | None,
 ) -> None:
     """Transition to SCANNING and store the physical dimensions extracted by the finalize Lambda."""
     set_status(
@@ -243,10 +242,10 @@ def get_by_id(settings: Settings, image_id: str, consistent: bool = False) -> Im
 def list_by_user(
     settings: Settings,
     user_id: str,
-    status_filter: Optional[str] = "ACTIVE",
-    tag_filter: Optional[str] = None,
+    status_filter: str | None = "ACTIVE",
+    tag_filter: str | None = None,
     limit: int = 20,
-    cursor: Optional[str] = None,
+    cursor: str | None = None,
 ) -> ListImagesResponse:
     """List images owned by a specific user via the UserImagesIndex GSI.
 
@@ -301,9 +300,9 @@ def list_by_user(
 def list_global(
     settings: Settings,
     status: str = "ACTIVE",
-    tag_filter: Optional[str] = None,
+    tag_filter: str | None = None,
     limit: int = 20,
-    cursor: Optional[str] = None,
+    cursor: str | None = None,
 ) -> ListImagesResponse:
     """List images globally using a scatter-gather across all StatusIndex shards.
 
@@ -320,12 +319,11 @@ def list_global(
 async def _scatter_gather(
     settings: Settings,
     status: str,
-    tag_filter: Optional[str],
+    tag_filter: str | None,
     limit: int,
-    cursor: Optional[str],
+    cursor: str | None,
 ) -> ListImagesResponse:
     """Async scatter step: fan out to all shards in parallel then merge results."""
-    import aioboto3
     import asyncio
 
     shard_keys = gsi2_pk_all_shards(status, settings.gsi2_shard_count)
@@ -347,9 +345,9 @@ async def _scatter_gather(
 async def _query_shard(
     settings: Settings,
     gsi2_pk_value: str,
-    tag_filter: Optional[str],
+    tag_filter: str | None,
     limit: int,
-    cursor: Optional[str],
+    cursor: str | None,
 ) -> list[ImageResponse]:
     """Query a single StatusIndex shard asynchronously using aioboto3."""
     import aioboto3

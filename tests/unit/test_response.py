@@ -3,8 +3,8 @@ import json
 
 import pytest
 
-from src.common.exceptions import ForbiddenError, NotFoundError, QuotaExceededError
 from src.common import response as resp
+from src.common.exceptions import ForbiddenError, NotFoundError, QuotaExceededError
 
 pytestmark = pytest.mark.unit
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import urllib.request
-from typing import Optional
 
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext
@@ -30,7 +29,7 @@ _SEVERITY_EMOJI: dict[str, str] = {
 }
 
 
-def _find_runbook(alarm_name: str) -> Optional[str]:
+def _find_runbook(alarm_name: str) -> str | None:
     """Return the runbook path for an alarm name using keyword matching, or None if not found."""
     for key, runbook in _RUNBOOK_MAP.items():
         if key.lower() in alarm_name.lower():

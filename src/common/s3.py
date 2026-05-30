@@ -8,7 +8,7 @@ Download URLs are signed with CloudFront keys when a key-pair ID is configured;
 otherwise they fall back to plain S3 presigned GET URLs for local development.
 """
 import time
-from typing import Optional
+from datetime import UTC
 
 import boto3
 from aws_lambda_powertools import Logger, Metrics
@@ -20,7 +20,7 @@ from src.common.config import Settings
 logger = Logger(service="image-service")
 metrics = Metrics(namespace="ImageService")
 
-_s3_client: Optional[boto3.client] = None
+_s3_client = None
 
 
 def get_s3_client(settings: Settings) -> boto3.client:
@@ -122,10 +122,11 @@ def _cloudfront_signed_url(settings: Settings, s3_key: str) -> str:
     The private key is loaded from ``settings.cloudfront_private_key_pem`` which
     was fetched from Secrets Manager at cold-start.
     """
-    from cryptography.hazmat.primitives import hashes, serialization
-    from cryptography.hazmat.primitives.asymmetric import padding
     import base64
     import json
+
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding
 
     expire_time = int(time.time()) + settings.download_url_ttl_seconds
     resource_url = f"https://your-cloudfront-domain/{s3_key}"
@@ -165,7 +166,7 @@ def build_s3_key(user_id: str, image_id: str, filename: str) -> str:
 
     The year/month prefix enables targeted S3 lifecycle rules and inventory.
     """
-    from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
+    from datetime import datetime
+    now = datetime.now(UTC)
     safe_name = sanitize_filename(filename)
     return f"originals/{user_id}/{now.year}/{now.month:02d}/{image_id}/{safe_name}"

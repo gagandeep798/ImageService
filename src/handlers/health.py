@@ -7,7 +7,6 @@ target for automatic DNS failover.
 
 Returns 200 when all checks pass; 503 with a ``degraded`` status when any check fails.
 """
-import time
 
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext

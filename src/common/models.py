@@ -7,11 +7,7 @@ DynamoDB item; ``ImageResponse`` is its public-facing subset.
 """
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Optional
-
 from pydantic import BaseModel, Field, field_validator
-
 
 ALLOWED_CONTENT_TYPES = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif"})
 
@@ -25,8 +21,8 @@ class UploadInitiateRequest(BaseModel):
     filename: str = Field(min_length=1, max_length=255)
     content_type: str
     total_size_bytes: int = Field(gt=0)
-    title: Optional[str] = Field(default=None, max_length=256)
-    description: Optional[str] = Field(default=None, max_length=2048)
+    title: str | None = Field(default=None, max_length=256)
+    description: str | None = Field(default=None, max_length=2048)
     tags: list[str] = Field(default_factory=list, max_length=20)
 
     @field_validator("content_type")
@@ -71,20 +67,20 @@ class ImageRecord(BaseModel):
 
     image_id: str
     user_id: str
-    title: Optional[str] = None
-    description: Optional[str] = None
+    title: str | None = None
+    description: str | None = None
     tags: list[str] = Field(default_factory=list)
     status: ImageStatus
     s3_key: str
-    upload_id: Optional[str] = None
-    size_bytes: Optional[int] = None
+    upload_id: str | None = None
+    size_bytes: int | None = None
     content_type: str
-    width: Optional[int] = None
-    height: Optional[int] = None
+    width: int | None = None
+    height: int | None = None
     thumbnail_keys: dict[str, str] = Field(default_factory=dict)
     created_at: str
     updated_at: str
-    deleted_at: Optional[str] = None
+    deleted_at: str | None = None
 
 
 class ImageResponse(BaseModel):
@@ -92,14 +88,14 @@ class ImageResponse(BaseModel):
 
     image_id: str
     user_id: str
-    title: Optional[str] = None
-    description: Optional[str] = None
+    title: str | None = None
+    description: str | None = None
     tags: list[str] = Field(default_factory=list)
     status: ImageStatus
-    size_bytes: Optional[int] = None
+    size_bytes: int | None = None
     content_type: str
-    width: Optional[int] = None
-    height: Optional[int] = None
+    width: int | None = None
+    height: int | None = None
     thumbnail_keys: dict[str, str] = Field(default_factory=dict)
     created_at: str
     updated_at: str
@@ -109,7 +105,7 @@ class ListImagesResponse(BaseModel):
     """Paginated list response returned by GET /images."""
 
     items: list[ImageResponse]
-    next_cursor: Optional[str] = None
+    next_cursor: str | None = None
     count: int
 
 
@@ -126,8 +122,8 @@ class UserRecord(BaseModel):
     image_count: int = 0
     created_at: str
     updated_at: str
-    deleted_at: Optional[str] = None
-    gdpr_erased_at: Optional[str] = None
+    deleted_at: str | None = None
+    gdpr_erased_at: str | None = None
 
 
 class SignupRequest(BaseModel):

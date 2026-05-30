@@ -2,7 +2,6 @@
 EventBridge trigger on Lambda Throttles alarm — temporarily increases
 reserved concurrency by 20% as auto-remediation.
 """
-import json
 
 import boto3
 from aws_lambda_powertools import Logger

@@ -1,5 +1,5 @@
 """Unit tests for user_repository — HMAC email key, password hashing, quota management."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from moto import mock_aws
@@ -89,7 +89,7 @@ def test_quota_check_passes(dynamodb_tables, mock_settings: Settings):
 @pytest.mark.skip(reason="moto does not support arithmetic in DynamoDB ConditionExpression")
 def test_quota_check_fails_when_exceeded(dynamodb_tables, mock_settings: Settings):
     table = dynamodb_tables.Table(mock_settings.users_table_name)
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     table.put_item(Item={
         "PK": "USER#usr_tight",
         "SK": "PROFILE",

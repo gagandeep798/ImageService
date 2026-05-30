@@ -26,7 +26,7 @@ def _make_event(body: dict, user_id: str = "usr_abc") -> dict:
 def test_upload_initiate_returns_202(dynamodb_tables, s3_buckets, mock_settings: Settings):
     with patch("src.handlers.upload_initiate.get_settings", return_value=mock_settings), \
          patch("src.repositories.storage_repository.initiate_upload",
-               return_value=("upload-id-123", f"originals/usr_abc/2026/05/img_xxx/photo.jpg")), \
+               return_value=("upload-id-123", "originals/usr_abc/2026/05/img_xxx/photo.jpg")), \
          patch("src.repositories.user_repository.check_and_reserve_quota"):
 
         from src.handlers.upload_initiate import handler

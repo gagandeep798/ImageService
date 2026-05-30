@@ -1,5 +1,4 @@
 """Unit tests for S3 storage repository."""
-from unittest.mock import MagicMock, patch
 
 import pytest
 from moto import mock_aws
