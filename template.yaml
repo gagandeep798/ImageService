@@ -15,9 +15,30 @@ Parameters:
   ServiceVersion:
     Type: String
     Default: "0.1.0"
-  JwtSecret:
+  CognitoUserPoolId:
+    Type: String
+    Default: ""
+  CognitoClientId:
+    Type: String
+    Default: ""
+  CognitoEndpointUrl:
+    Type: String
+    Default: ""
+  PiiPepper:
     Type: String
     NoEcho: true
+    Default: ""
+  SlackWebhookUrl:
+    Type: String
+    Default: ""
+  CloudFrontKeyPairId:
+    Type: String
+    Default: ""
+  CloudFrontPrivateKeyB64:
+    Type: String
+    Default: ""
+  AwsEndpointUrl:
+    Type: String
     Default: ""
 
 Globals:
@@ -51,13 +72,19 @@ Globals:
         UPLOAD_URL_TTL_SECONDS: "900"
         DOWNLOAD_URL_TTL_SECONDS: "3600"
         DYNAMO_DELETE_ROLE_ARN: !GetAtt DynamoDBDeleteRole.Arn
-        JWT_SECRET: !Ref JwtSecret
-        JWT_ACCESS_TOKEN_TTL: "3600"
-        JWT_REFRESH_TOKEN_TTL: "2592000"
+        COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+        COGNITO_CLIENT_ID: !Ref CognitoClientId
+        COGNITO_ENDPOINT_URL: !Ref CognitoEndpointUrl
+        PII_PEPPER: !Ref PiiPepper
+        SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+        CLOUDFRONT_KEY_PAIR_ID: !Ref CloudFrontKeyPairId
+        CLOUDFRONT_PRIVATE_KEY_B64: !Ref CloudFrontPrivateKeyB64
+        AWS_ENDPOINT_URL: !Ref AwsEndpointUrl
 
 # ── Conditions ────────────────────────────────────────────────────────────────
 Conditions:
   IsProd: !Equals [!Ref Env, prod]
+  IsLocal: !Equals [!Ref Env, local]
   IsNotLocal: !Not [!Equals [!Ref Env, local]]
 
 Resources:
@@ -110,15 +137,9 @@ Resources:
       AttributeDefinitions:
         - {AttributeName: PK, AttributeType: S}
         - {AttributeName: SK, AttributeType: S}
-        - {AttributeName: EmailHashIndex_PK, AttributeType: S}
       KeySchema:
         - {AttributeName: PK, KeyType: HASH}
         - {AttributeName: SK, KeyType: RANGE}
-      GlobalSecondaryIndexes:
-        - IndexName: EmailHashIndex
-          KeySchema:
-            - {AttributeName: EmailHashIndex_PK, KeyType: HASH}
-          Projection: {ProjectionType: KEYS_ONLY}
       TimeToLiveSpecification:
         AttributeName: ttl
         Enabled: true
@@ -514,8 +535,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-upload-initiate-${Env}"
-      CodeUri: src/
-      Handler: handlers.upload_initiate.handler
+      CodeUri: .
+      Handler: src.handlers.upload_initiate.handler
       ReservedConcurrentExecutions: 50
       Events:
         Api:
@@ -538,8 +559,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-upload-part-${Env}"
-      CodeUri: src/
-      Handler: handlers.upload_part.handler
+      CodeUri: .
+      Handler: src.handlers.upload_part.handler
       Events:
         Api:
           Type: Api
@@ -561,8 +582,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-upload-complete-${Env}"
-      CodeUri: src/
-      Handler: handlers.upload_complete.handler
+      CodeUri: .
+      Handler: src.handlers.upload_complete.handler
       Events:
         Api:
           Type: Api
@@ -584,8 +605,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-upload-abort-${Env}"
-      CodeUri: src/
-      Handler: handlers.upload_abort.handler
+      CodeUri: .
+      Handler: src.handlers.upload_abort.handler
       Events:
         Api:
           Type: Api
@@ -609,8 +630,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-finalize-upload-${Env}"
-      CodeUri: src/
-      Handler: handlers.finalize_upload.handler
+      CodeUri: .
+      Handler: src.handlers.finalize_upload.handler
       MemorySize: 1024
       Timeout: 60
       ReservedConcurrentExecutions: 100
@@ -637,8 +658,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-scan-complete-${Env}"
-      CodeUri: src/
-      Handler: handlers.scan_complete.handler
+      CodeUri: .
+      Handler: src.handlers.scan_complete.handler
       Events:
         SQSTrigger:
           Type: SQS
@@ -664,8 +685,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-generate-thumbnails-${Env}"
-      CodeUri: src/
-      Handler: handlers.generate_thumbnails.handler
+      CodeUri: .
+      Handler: src.handlers.generate_thumbnails.handler
       MemorySize: 1024
       Timeout: 120
       Events:
@@ -694,8 +715,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-get-image-${Env}"
-      CodeUri: src/
-      Handler: handlers.get_image.handler
+      CodeUri: .
+      Handler: src.handlers.get_image.handler
       Events:
         Api:
           Type: Api
@@ -710,8 +731,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-list-images-${Env}"
-      CodeUri: src/
-      Handler: handlers.list_images.handler
+      CodeUri: .
+      Handler: src.handlers.list_images.handler
       Events:
         Api:
           Type: Api
@@ -726,8 +747,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-delete-image-${Env}"
-      CodeUri: src/
-      Handler: handlers.delete_image.handler
+      CodeUri: .
+      Handler: src.handlers.delete_image.handler
       Events:
         Api:
           Type: Api
@@ -749,8 +770,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-download-${Env}"
-      CodeUri: src/
-      Handler: handlers.download.handler
+      CodeUri: .
+      Handler: src.handlers.download.handler
       Events:
         Api:
           Type: Api
@@ -770,8 +791,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-health-${Env}"
-      CodeUri: src/
-      Handler: handlers.health.handler
+      CodeUri: .
+      Handler: src.handlers.health.handler
       Events:
         Api:
           Type: Api
@@ -793,8 +814,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-gdpr-delete-user-${Env}"
-      CodeUri: src/
-      Handler: handlers.gdpr_delete_user.handler
+      CodeUri: .
+      Handler: src.handlers.gdpr_delete_user.handler
       Timeout: 300
       Events:
         Api:
@@ -817,8 +838,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-slack-notifier-${Env}"
-      CodeUri: src/
-      Handler: handlers.slack_notifier.handler
+      CodeUri: .
+      Handler: src.handlers.slack_notifier.handler
       Events:
         SNSTrigger:
           Type: SNS
@@ -829,13 +850,53 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-scale-lambda-${Env}"
-      CodeUri: src/
-      Handler: handlers.scale_lambda.handler
+      CodeUri: .
+      Handler: src.handlers.scale_lambda.handler
       Policies:
         - Statement:
             - Effect: Allow
               Action: [lambda:GetFunctionConcurrency, lambda:PutFunctionConcurrency]
               Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:image-service-*"
+
+  # ── Cognito (staging/prod only — local uses jagregory/cognito-local) ─────────
+
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Condition: IsNotLocal
+    Properties:
+      UserPoolName: !Sub "image-service-users-${Env}"
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      Schema:
+        - Name: user_id
+          AttributeDataType: String
+          Mutable: false
+          Required: false
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Condition: IsNotLocal
+    Properties:
+      ClientName: !Sub "image-service-client-${Env}"
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
 
   # ── API Gateway ───────────────────────────────────────────────────────────────
 
@@ -846,12 +907,13 @@ Resources:
       StageName: v1
       TracingEnabled: true
       Auth:
-        DefaultAuthorizer: TokenAuthorizer
+        DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
-          TokenAuthorizer:
-            FunctionArn: !GetAtt TokenAuthorizerFunction.Arn
-            Identity:
-              Header: Authorization
+          CognitoAuthorizer:
+            UserPoolArn: !If
+              - IsNotLocal
+              - !GetAtt CognitoUserPool.Arn
+              - !Sub "arn:aws:cognito-idp:${AWS::Region}:000000000000:userpool/${CognitoUserPoolId}"
       MethodSettings:
         - ResourcePath: "/*"
           HttpMethod: "*"
@@ -866,23 +928,12 @@ Resources:
 
   # ── Auth Lambda Functions ─────────────────────────────────────────────────────
 
-  TokenAuthorizerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub "image-service-token-authorizer-${Env}"
-      CodeUri: src/
-      Handler: handlers.token_authorizer.handler
-      Timeout: 5
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref UsersTable
-
   AuthSignupFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-auth-signup-${Env}"
-      CodeUri: src/
-      Handler: handlers.auth_signup.handler
+      CodeUri: .
+      Handler: src.handlers.auth_signup.handler
       Events:
         Api:
           Type: Api
@@ -902,8 +953,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-auth-login-${Env}"
-      CodeUri: src/
-      Handler: handlers.auth_login.handler
+      CodeUri: .
+      Handler: src.handlers.auth_login.handler
       Events:
         Api:
           Type: Api
@@ -921,8 +972,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-auth-refresh-${Env}"
-      CodeUri: src/
-      Handler: handlers.auth_refresh.handler
+      CodeUri: .
+      Handler: src.handlers.auth_refresh.handler
       Events:
         Api:
           Type: Api
