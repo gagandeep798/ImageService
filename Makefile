@@ -180,7 +180,7 @@ dev: stop localstack-start build ## Full CloudFormation deploy to LocalStack + S
 	    CognitoUserPoolId=$(COGNITO_USER_POOL_ID) \
 	    CognitoClientId=$(COGNITO_CLIENT_ID) \
 	    CognitoEndpointUrl=http://image-service-cognito-local:9229
-	AWS_ENDPOINT_URL=http://localhost:4566 bash scripts/wire-notifications.sh local
+	bash scripts/deploy-pipeline-local.sh
 	$(DC) up -d frontend
 	sam local start-api \
 	  --docker-network image-service-net \

@@ -20,7 +20,13 @@ else
     aws_cmd() { aws --region="$REGION" "$@"; }
 fi
 
-BUCKET="image-service-originals-${ACCOUNT}-${REGION}-${ENV}"
+# For local env the .env-exported ORIGINALS_BUCKET overrides the CF-resolved
+# bucket name in SAM Lambda containers, so uploads land in the bare bucket.
+if [ "$ENV" = "local" ]; then
+    BUCKET="image-service-originals-${ACCOUNT}-${REGION}"
+else
+    BUCKET="image-service-originals-${ACCOUNT}-${REGION}-${ENV}"
+fi
 FUNC_ARN="arn:aws:lambda:${REGION}:${ACCOUNT}:function:image-service-finalize-upload-${ENV}"
 
 aws_cmd lambda add-permission \
