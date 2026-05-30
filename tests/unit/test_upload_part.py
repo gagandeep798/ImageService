@@ -17,7 +17,7 @@ def _event(image_id: str, body: dict, user_id: str = "usr_abc") -> dict:
         "body": json.dumps(body),
         "requestContext": {
             "requestId": "req-part",
-            "authorizer": {"user_id": user_id},
+            "authorizer": {"claims": {"custom:user_id": user_id}},
         },
         "queryStringParameters": {},
     }

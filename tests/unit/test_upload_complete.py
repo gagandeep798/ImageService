@@ -15,7 +15,7 @@ def _event(image_id: str, user_id: str = "usr_abc") -> dict:
     return {
         "pathParameters": {"image_id": image_id},
         "body": json.dumps({"upload_id": "up-1", "parts": [{"part_number": 1, "etag": '"abc"'}]}),
-        "requestContext": {"requestId": "req-cmp", "authorizer": {"user_id": user_id}},
+        "requestContext": {"requestId": "req-cmp", "authorizer": {"claims": {"custom:user_id": user_id}}},
         "queryStringParameters": {},
     }
 

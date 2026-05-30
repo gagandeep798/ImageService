@@ -80,8 +80,11 @@ class TestImageResponse:
 
 
 class TestUserRecord:
-    def test_email_not_in_fields(self):
+    def test_credentials_not_in_fields(self):
+        # Credentials are owned by Cognito — profile record has no email/password fields
         fields = set(UserRecord.model_fields.keys())
         assert "email" not in fields
-        assert "email_hash" in fields
-        assert "password_hash" in fields
+        assert "email_hash" not in fields
+        assert "password_hash" not in fields
+        assert "display_name" in fields
+        assert "storage_quota_bytes" in fields

@@ -14,7 +14,7 @@ pytestmark = pytest.mark.unit
 def _event(qs: dict = None) -> dict:
     return {
         "pathParameters": {},
-        "requestContext": {"requestId": "req-list", "authorizer": {"user_id": "usr_abc"}},
+        "requestContext": {"requestId": "req-list", "authorizer": {"claims": {"custom:user_id": "usr_abc"}}},
         "queryStringParameters": qs or {},
     }
 

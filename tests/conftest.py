@@ -39,9 +39,9 @@ TEST_SETTINGS = Settings(
     cloudfront_private_key_pem="LOCAL_DEV_NO_CLOUDFRONT",
     cloudfront_key_pair_id="LOCAL_DEV",
     slack_webhook_url="",
-    jwt_secret="test-jwt-secret",
-    jwt_access_token_ttl=3600,
-    jwt_refresh_token_ttl=2592000,
+    cognito_user_pool_id="us-east-1_testpool",
+    cognito_client_id="testclientid",
+    cognito_endpoint_url=None,
     env="test",
     service_version="0.1.0",
 )
@@ -109,18 +109,12 @@ def dynamodb_tables(mock_settings: Settings):
             AttributeDefinitions=[
                 {"AttributeName": "PK", "AttributeType": "S"},
                 {"AttributeName": "SK", "AttributeType": "S"},
-                {"AttributeName": "EmailHashIndex_PK", "AttributeType": "S"},
             ],
             KeySchema=[
                 {"AttributeName": "PK", "KeyType": "HASH"},
                 {"AttributeName": "SK", "KeyType": "RANGE"},
             ],
             BillingMode="PAY_PER_REQUEST",
-            GlobalSecondaryIndexes=[{
-                "IndexName": "EmailHashIndex",
-                "KeySchema": [{"AttributeName": "EmailHashIndex_PK", "KeyType": "HASH"}],
-                "Projection": {"ProjectionType": "KEYS_ONLY"},
-            }],
         )
 
         yield boto3.resource("dynamodb", region_name=mock_settings.aws_region)

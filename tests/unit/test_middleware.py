@@ -7,11 +7,16 @@ from src.common.exceptions import ForbiddenError
 pytestmark = pytest.mark.unit
 
 
-def _event(user_id: str = "usr_abc", is_admin: str = "false") -> dict:
+def _event(user_id: str = "usr_abc", is_admin: bool = False) -> dict:
     return {
         "requestContext": {
             "requestId": "req-123",
-            "authorizer": {"user_id": user_id, "is_admin": is_admin},
+            "authorizer": {
+                "claims": {
+                    "custom:user_id": user_id,
+                    "cognito:groups": "admins" if is_admin else "",
+                }
+            },
         },
         "queryStringParameters": {},
     }
@@ -36,11 +41,11 @@ def test_dev_bypass_via_query_param():
 
 
 def test_is_admin_returns_true():
-    assert middleware.is_admin(_event(is_admin="true")) is True
+    assert middleware.is_admin(_event(is_admin=True)) is True
 
 
 def test_is_admin_returns_false():
-    assert middleware.is_admin(_event(is_admin="false")) is False
+    assert middleware.is_admin(_event(is_admin=False)) is False
 
 
 def test_get_request_id_extracts_from_context():
