@@ -26,6 +26,7 @@ moto = {extras = ["dynamodb", "s3", "sqs", "kinesis"], version = "^5.0"}
 mypy = "^1.10"
 ruff = "^0.4"
 boto3-stubs = {extras = ["dynamodb", "s3", "sqs", "kinesis", "cognito-idp", "lambda", "cloudwatch"], version = "^1.34"}
+aws-sam-cli-local = "^1.70.1"
 
 [build-system]
 requires = ["poetry-core"]

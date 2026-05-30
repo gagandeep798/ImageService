@@ -150,8 +150,8 @@ build: ## Build SAM project using Docker
 deploy-pipeline-local: ## Deploy finalize/scan/thumbnail Lambdas to LocalStack and wire S3 notification
 	bash scripts/deploy-pipeline-local.sh
 
-deploy-local: localstack-start build ## Deploy full CloudFormation stack to LocalStack via samlocal (requires: pip install aws-sam-cli-local)
-	samlocal deploy \
+deploy-local: localstack-start build ## Deploy full CloudFormation stack to LocalStack via samlocal
+	poetry run samlocal deploy \
 	  --config-env local \
 	  --parameter-overrides \
 	    Env=local \
