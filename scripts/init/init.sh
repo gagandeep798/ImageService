@@ -15,7 +15,6 @@ INIT_DIR="${INIT_DIR:-$SCRIPT_DIR}"
 bash "$INIT_DIR/vpc.sh"
 bash "$INIT_DIR/s3.sh"
 bash "$INIT_DIR/dynamodb.sh"
-bash "$INIT_DIR/sqs.sh"
 bash "$INIT_DIR/migrations.sh"
 
 echo "[init] LocalStack init complete"

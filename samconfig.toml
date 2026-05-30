@@ -3,6 +3,16 @@ version = 0.1
 [default.build.parameters]
 use_container = true
 
+[local.deploy.parameters]
+stack_name = "image-service-local"
+s3_bucket = "image-service-sam-artifacts"
+s3_prefix = "image-service-local"
+s3_endpoint_url = "http://localhost:4566"
+region = "us-east-1"
+capabilities = "CAPABILITY_NAMED_IAM"
+confirm_changeset = false
+fail_on_empty_changeset = false
+
 [dev.deploy.parameters]
 stack_name = "image-service-dev"
 resolve_s3 = true

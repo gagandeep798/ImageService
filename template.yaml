@@ -66,9 +66,6 @@ Globals:
         THUMBNAILS_BUCKET: !Ref ThumbnailsBucket
         QUARANTINE_BUCKET: !Ref QuarantineBucket
         LOGS_BUCKET: !Ref LogsBucket
-        FINALIZE_QUEUE_URL: !Ref FinalizeQueue
-        SCAN_QUEUE_URL: !Ref ScanQueue
-        THUMBNAIL_QUEUE_URL: !Ref ThumbnailQueue
         DYNAMO_GSI2_SHARD_COUNT: "8"
         MAX_IMAGE_SIZE_BYTES: "20971520"
         CHUNK_SIZE_BYTES: "5242880"
@@ -187,14 +184,14 @@ Resources:
             ExposedHeaders: [ETag]
             MaxAge: 3600
       NotificationConfiguration:
-        QueueConfigurations:
+        LambdaConfigurations:
           - Event: s3:ObjectCreated:*
             Filter:
               S3Key:
                 Rules:
                   - Name: prefix
                     Value: originals/
-            Queue: !GetAtt FinalizeQueue.Arn
+            Function: !GetAtt FinalizeUploadFunction.Arn
       LifecycleConfiguration:
         Rules:
           - Id: transition-to-ia
@@ -368,71 +365,6 @@ Resources:
           Bucket: !Sub "image-service-logs-${AWS::AccountId}-${AWS::Region}-${Env}.s3.amazonaws.com"
           Prefix: logs/cloudfront/
           IncludeCookies: false
-
-  # ── SQS Queues ───────────────────────────────────────────────────────────────
-
-  FinalizeDLQ:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "image-service-finalize-dlq-${Env}"
-      MessageRetentionPeriod: 1209600  # 14 days
-
-  FinalizeQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "image-service-finalize-${Env}"
-      VisibilityTimeout: 60
-      MessageRetentionPeriod: 86400
-      RedrivePolicy:
-        deadLetterTargetArn: !GetAtt FinalizeDLQ.Arn
-        maxReceiveCount: 3
-
-  ScanDLQ:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "image-service-scan-dlq-${Env}"
-
-  ScanQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "image-service-scan-${Env}"
-      VisibilityTimeout: 120
-      MessageRetentionPeriod: 86400
-      RedrivePolicy:
-        deadLetterTargetArn: !GetAtt ScanDLQ.Arn
-        maxReceiveCount: 3
-
-  ThumbnailDLQ:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "image-service-thumbnails-dlq-${Env}"
-      MessageRetentionPeriod: 1209600  # 14 days
-
-  ThumbnailQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "image-service-thumbnails-${Env}"
-      VisibilityTimeout: 120
-      MessageRetentionPeriod: 86400
-      RedrivePolicy:
-        deadLetterTargetArn: !GetAtt ThumbnailDLQ.Arn
-        maxReceiveCount: 3
-
-  # SQS policy to allow S3 to send messages
-  FinalizeQueuePolicy:
-    Type: AWS::SQS::QueuePolicy
-    Properties:
-      Queues: [!Ref FinalizeQueue]
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: s3.amazonaws.com
-            Action: sqs:SendMessage
-            Resource: !GetAtt FinalizeQueue.Arn
-            Condition:
-              ArnLike:
-                aws:SourceArn: !Sub "arn:aws:s3:::image-service-originals-${AWS::AccountId}-${AWS::Region}-${Env}"
 
   # ── DynamoDB Access-Tier IAM Roles ───────────────────────────────────────────
   # Three separate IAM roles enforce least-privilege at the AWS level.
@@ -639,16 +571,10 @@ Resources:
       MemorySize: 1024
       Timeout: 60
       ReservedConcurrentExecutions: 100
-      Events:
-        SQSTrigger:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt FinalizeQueue.Arn
-            BatchSize: 5
-            FunctionResponseTypes: [ReportBatchItemFailures]
+      Environment:
+        Variables:
+          SCAN_COMPLETE_FUNCTION_ARN: !GetAtt ScanCompleteFunction.Arn
       Policies:
-        - SQSPollerPolicy:
-            QueueName: !GetAtt FinalizeQueue.QueueName
         - DynamoDBWritePolicy:
             TableName: !Ref ImagesTable
         - DynamoDBWritePolicy:
@@ -657,6 +583,9 @@ Resources:
             - Effect: Allow
               Action: [s3:GetObject, s3:HeadObject]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
+            - Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource: !GetAtt ScanCompleteFunction.Arn
 
   ScanCompleteFunction:
     Type: AWS::Serverless::Function
@@ -664,16 +593,10 @@ Resources:
       FunctionName: !Sub "image-service-scan-complete-${Env}"
       CodeUri: .
       Handler: src.handlers.scan_complete.handler
-      Events:
-        SQSTrigger:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt ScanQueue.Arn
-            BatchSize: 10
-            FunctionResponseTypes: [ReportBatchItemFailures]
+      Environment:
+        Variables:
+          GENERATE_THUMBNAILS_FUNCTION_ARN: !GetAtt GenerateThumbnailsFunction.Arn
       Policies:
-        - SQSPollerPolicy:
-            QueueName: !GetAtt ScanQueue.QueueName
         - DynamoDBReadPolicy:
             TableName: !Ref ImagesTable
         - DynamoDBWritePolicy:
@@ -684,6 +607,9 @@ Resources:
               Resource:
                 - !Sub "${OriginalsBucket.Arn}/*"
                 - !Sub "${QuarantineBucket.Arn}/*"
+            - Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource: !GetAtt GenerateThumbnailsFunction.Arn
 
   GenerateThumbnailsFunction:
     Type: AWS::Serverless::Function
@@ -693,16 +619,7 @@ Resources:
       Handler: src.handlers.generate_thumbnails.handler
       MemorySize: 1024
       Timeout: 120
-      Events:
-        SQSTrigger:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt ThumbnailQueue.Arn
-            BatchSize: 5
-            FunctionResponseTypes: [ReportBatchItemFailures]
       Policies:
-        - SQSPollerPolicy:
-            QueueName: !GetAtt ThumbnailQueue.QueueName
         - DynamoDBReadPolicy:
             TableName: !Ref ImagesTable
         - DynamoDBWritePolicy:
@@ -1031,21 +948,13 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       AlarmActions: [!Ref AlertsTopic]
 
-  FinalizeDLQAlarm:
-    Type: AWS::CloudWatch::Alarm
+  FinalizeUploadS3Permission:
+    Type: AWS::Lambda::Permission
     Properties:
-      AlarmName: !Sub "image-service-FinalizeDLQ-${Env}"
-      MetricName: ApproximateNumberOfMessagesVisible
-      Namespace: AWS/SQS
-      Dimensions:
-        - Name: QueueName
-          Value: !GetAtt FinalizeDLQ.QueueName
-      Statistic: Sum
-      Period: 60
-      EvaluationPeriods: 1
-      Threshold: 0
-      ComparisonOperator: GreaterThanThreshold
-      AlarmActions: [!Ref AlertsTopic]
+      FunctionName: !GetAtt FinalizeUploadFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt OriginalsBucket.Arn
 
   ScanThreatAlarm:
     Type: AWS::CloudWatch::Alarm

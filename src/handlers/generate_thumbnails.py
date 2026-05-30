@@ -1,14 +1,10 @@
-"""SQS consumer that generates thumbnail variants and strips EXIF metadata.
+"""Direct-invocation handler that generates thumbnail variants and strips EXIF metadata.
 
-Triggered after an image transitions to ACTIVE.  For each image three variants
-are produced (128px, 400px, 1200px).  EXIF data — which can contain GPS
-coordinates, camera make/model, and owner information — is stripped from every
-variant using Pillow's ``exif_transpose`` + JPEG re-save workflow.  Thumbnails
-are stored in the thumbnails bucket with a 24-hour public cache header for
-CloudFront edge caching.
+Invoked asynchronously by ScanCompleteFunction with payload ``{image_id}``.
+Produces three JPEG variants (128px, 400px, 1200px) with EXIF stripped.
+Thumbnails are stored in the thumbnails bucket with a 24-hour cache header.
 """
 import io
-import json
 
 from aws_lambda_powertools import Logger, Metrics, Tracer
 from aws_lambda_powertools.utilities.typing import LambdaContext
@@ -30,11 +26,9 @@ VARIANTS: dict[str, tuple[int, int]] = {
 
 
 def _generate_thumbnail(data: bytes, size: tuple[int, int]) -> bytes:
-    """Resize ``data`` to fit within ``size``, correct orientation, strip EXIF, and return JPEG bytes."""
     img = Image.open(io.BytesIO(data))
-    img = ImageOps.exif_transpose(img)  # correct orientation
+    img = ImageOps.exif_transpose(img)
     img.thumbnail(size, Image.LANCZOS)
-    # Save without EXIF to strip location and camera metadata
     buf = io.BytesIO()
     rgb = img.convert("RGB")
     rgb.save(buf, format="JPEG", quality=85, optimize=True)
@@ -45,31 +39,28 @@ def _generate_thumbnail(data: bytes, size: tuple[int, int]) -> bytes:
 @tracer.capture_lambda_handler
 @metrics.log_metrics
 def handler(event: dict, context: LambdaContext) -> dict:
-    """Lambda entry point — processes thumbnail generation requests from ThumbnailQueue."""
+    """Lambda entry point — generates thumbnails for a single image."""
     settings = get_settings()
+    image_id: str = event.get("image_id", "")
 
-    for record in event.get("Records", []):
-        body = json.loads(record.get("body", "{}"))
-        image_id: str = body.get("image_id", "")
+    if not image_id:
+        return {"ok": False, "error": "missing image_id"}
 
-        if not image_id:
-            continue
+    try:
+        image = img_repo.get_by_id(settings, image_id)
+        raw_data = store_repo.get_object_bytes(settings, image.s3_key, max_bytes=20 * 1024 * 1024)
 
-        try:
-            image = img_repo.get_by_id(settings, image_id)
-            raw_data = store_repo.get_object_bytes(settings, image.s3_key, max_bytes=20 * 1024 * 1024)
+        thumbnail_keys: dict[str, str] = {}
+        for variant_name, size in VARIANTS.items():
+            thumb_data = _generate_thumbnail(raw_data, size)
+            key = store_repo.put_thumbnail(settings, image_id, variant_name, thumb_data, "image/jpeg")
+            thumbnail_keys[variant_name] = key
 
-            thumbnail_keys: dict[str, str] = {}
-            for variant_name, size in VARIANTS.items():
-                thumb_data = _generate_thumbnail(raw_data, size)
-                key = store_repo.put_thumbnail(settings, image_id, variant_name, thumb_data, "image/jpeg")
-                thumbnail_keys[variant_name] = key
+        img_repo.update_thumbnail_keys(settings, image_id, thumbnail_keys)
+        logger.info("thumbnails_generated", image_id=image_id, variants=list(thumbnail_keys.keys()))
 
-            img_repo.update_thumbnail_keys(settings, image_id, thumbnail_keys)
-            logger.info("thumbnails_generated", image_id=image_id, variants=list(thumbnail_keys.keys()))
-
-        except Exception:
-            logger.exception("Failed to generate thumbnails", image_id=image_id)
-            raise
+    except Exception:
+        logger.exception("Failed to generate thumbnails", image_id=image_id)
+        raise
 
     return {"ok": True}

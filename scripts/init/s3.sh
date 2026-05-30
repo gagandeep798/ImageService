@@ -22,8 +22,9 @@ LOGS="image-service-logs-${ACCOUNT}-${REGION}"
 CLOUDTRAIL_LOGS="image-service-cloudtrail-logs-${ACCOUNT}-${REGION}"
 BACKUPS="image-service-backups-${ACCOUNT}-${REGION}"
 FRONTEND="image-service-frontend-${ACCOUNT}-${REGION}"
+SAM_ARTIFACTS="image-service-sam-artifacts"
 
-for bucket in "$ORIGINALS" "$THUMBNAILS" "$QUARANTINE" "$LOGS" "$CLOUDTRAIL_LOGS" "$BACKUPS" "$FRONTEND"; do
+for bucket in "$ORIGINALS" "$THUMBNAILS" "$QUARANTINE" "$LOGS" "$CLOUDTRAIL_LOGS" "$BACKUPS" "$FRONTEND" "$SAM_ARTIFACTS"; do
     create_bucket "$bucket"
 done
 

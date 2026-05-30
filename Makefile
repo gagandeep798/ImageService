@@ -26,11 +26,12 @@ AWS_CMD = aws$(if $(AWS_ENDPOINT_URL), --endpoint-url=$(AWS_ENDPOINT_URL),)
         migrate-local migrate-staging migrate-dry-run \
         test-unit test-integration test \
         lint format typecheck \
-        build start-api \
+        build start-api deploy-pipeline-local deploy-local \
         deploy-dev deploy-staging deploy-prod \
         frontend-install frontend-dev frontend-build \
         deploy-frontend-staging deploy-frontend-prod \
-        _frontend-sync _deploy-frontend
+        _frontend-sync _deploy-frontend \
+        dev-activate
 
 # ── Help ──────────────────────────────────────────────────────────────────────
 
@@ -146,7 +147,23 @@ build: ## Build SAM project using Docker
 	docker run --rm -v "$(PWD)/.aws-sam:/workspace" alpine sh -c "rm -rf /workspace/build" 2>/dev/null || true
 	sam build --use-container
 
-start-api: localstack-start build ## Start SAM local API on http://localhost:3000
+deploy-pipeline-local: ## Deploy finalize/scan/thumbnail Lambdas to LocalStack and wire S3 notification
+	bash scripts/deploy-pipeline-local.sh
+
+deploy-local: localstack-start build ## Deploy full CloudFormation stack to LocalStack via samlocal (requires: pip install aws-sam-cli-local)
+	samlocal deploy \
+	  --config-env local \
+	  --parameter-overrides \
+	    Env=local \
+	    LogLevel=DEBUG \
+	    AwsEndpointUrl=http://image-service-localstack:4566 \
+	    S3PresignedEndpointUrl=http://localhost:4566 \
+	    PiiPepper=$(PII_PEPPER) \
+	    CognitoUserPoolId=$(COGNITO_USER_POOL_ID) \
+	    CognitoClientId=$(COGNITO_CLIENT_ID) \
+	    CognitoEndpointUrl=http://image-service-cognito-local:9229
+
+start-api: localstack-start build deploy-pipeline-local ## Start SAM local API on http://localhost:3000
 	sam local start-api \
 	  --docker-network image-service-net \
 	  --port 3000 \

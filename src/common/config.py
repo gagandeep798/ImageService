@@ -51,6 +51,10 @@ class Settings:
     # Alerts
     slack_webhook_url: str
 
+    # Pipeline — downstream Lambda ARNs for direct invocation
+    scan_complete_function_arn: str
+    generate_thumbnails_function_arn: str
+
     # Cognito
     cognito_user_pool_id: str
     cognito_client_id: str
@@ -97,6 +101,8 @@ def get_settings() -> Settings:
         cloudfront_private_key_pem=cf_private_key,
         cloudfront_key_pair_id=os.environ.get("CLOUDFRONT_KEY_PAIR_ID", ""),
         slack_webhook_url=os.environ.get("SLACK_WEBHOOK_URL", ""),
+        scan_complete_function_arn=os.environ.get("SCAN_COMPLETE_FUNCTION_ARN", ""),
+        generate_thumbnails_function_arn=os.environ.get("GENERATE_THUMBNAILS_FUNCTION_ARN", ""),
         cognito_user_pool_id=os.environ.get("COGNITO_USER_POOL_ID", ""),
         cognito_client_id=os.environ.get("COGNITO_CLIENT_ID", ""),
         cognito_endpoint_url=os.environ.get("COGNITO_ENDPOINT_URL") or None,
