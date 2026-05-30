@@ -25,6 +25,7 @@ class Settings:
     quarantine_bucket: str
     logs_bucket: str
     s3_endpoint_url: str | None
+    s3_presigned_endpoint_url: str | None
 
     # Upload
     max_image_size_bytes: int
@@ -83,6 +84,7 @@ def get_settings() -> Settings:
         quarantine_bucket=os.environ.get("QUARANTINE_BUCKET", ""),
         logs_bucket=os.environ.get("LOGS_BUCKET", ""),
         s3_endpoint_url=s3_endpoint,
+        s3_presigned_endpoint_url=os.environ.get("S3_PRESIGNED_ENDPOINT_URL") or None,
         max_image_size_bytes=int(os.environ.get("MAX_IMAGE_SIZE_BYTES", str(20 * 1024 * 1024))),
         chunk_size_bytes=int(os.environ.get("CHUNK_SIZE_BYTES", str(5 * 1024 * 1024))),
         upload_url_ttl_seconds=int(os.environ.get("UPLOAD_URL_TTL_SECONDS", "900")),

@@ -16,6 +16,7 @@ from src.common.s3 import (
     generate_download_url,
     generate_upload_part_url,
     get_s3_client,
+    get_s3_presign_client,
 )
 
 
@@ -42,7 +43,7 @@ def get_part_upload_url(
     The URL is scoped to a specific ``upload_id`` and ``part_number`` so it
     cannot be misused for other uploads.
     """
-    client = get_s3_client(settings)
+    client = get_s3_presign_client(settings)
     return generate_upload_part_url(
         client,
         settings.originals_bucket,
@@ -50,6 +51,7 @@ def get_part_upload_url(
         upload_id,
         part_number,
         settings.upload_url_ttl_seconds,
+        presigned_endpoint_url=settings.s3_presigned_endpoint_url,
     )
 
 
@@ -67,7 +69,7 @@ def cancel_upload(settings: Settings, s3_key: str, upload_id: str) -> None:
 
 def get_download_url(settings: Settings, s3_key: str) -> str:
     """Return a time-limited download URL (CloudFront signed URL in prod, S3 presigned in dev)."""
-    client = get_s3_client(settings)
+    client = get_s3_presign_client(settings)
     return generate_download_url(client, settings, s3_key)
 
 
