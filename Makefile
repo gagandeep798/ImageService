@@ -127,19 +127,28 @@ _frontend-sync:
 	  --distribution-id $(CLOUDFRONT_DISTRIBUTION_ID) \
 	  --paths "/*"
 
-_stack_output = $(shell $(AWS_CMD) cloudformation describe-stacks \
-  --stack-name image-service-$(1) \
-  --query "Stacks[0].Outputs[?OutputKey=='$(2)'].OutputValue" \
-  --output text)
-
 deploy-frontend-staging: frontend-build
-	$(MAKE) _frontend-sync \
-	  FRONTEND_BUCKET=$(call _stack_output,staging,FrontendBucketName) \
-	  CLOUDFRONT_DISTRIBUTION_ID=$(call _stack_output,staging,CloudFrontDistributionId)
+	@set -e; \
+	bucket=$$($(AWS_CMD) cloudformation describe-stacks \
+	  --stack-name image-service-staging \
+	  --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" \
+	  --output text); \
+	cf_id=$$($(AWS_CMD) cloudformation describe-stacks \
+	  --stack-name image-service-staging \
+	  --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" \
+	  --output text); \
+	$(MAKE) _frontend-sync FRONTEND_BUCKET=$$bucket CLOUDFRONT_DISTRIBUTION_ID=$$cf_id
 
 deploy-frontend-prod: frontend-build
 	@echo "Deploying frontend to PRODUCTION. Ctrl-C to abort..."
 	@sleep 3
-	$(MAKE) _frontend-sync \
-	  FRONTEND_BUCKET=$(call _stack_output,prod,FrontendBucketName) \
-	  CLOUDFRONT_DISTRIBUTION_ID=$(call _stack_output,prod,CloudFrontDistributionId)
+	@set -e; \
+	bucket=$$($(AWS_CMD) cloudformation describe-stacks \
+	  --stack-name image-service-prod \
+	  --query "Stacks[0].Outputs[?OutputKey=='FrontendBucketName'].OutputValue" \
+	  --output text); \
+	cf_id=$$($(AWS_CMD) cloudformation describe-stacks \
+	  --stack-name image-service-prod \
+	  --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" \
+	  --output text); \
+	$(MAKE) _frontend-sync FRONTEND_BUCKET=$$bucket CLOUDFRONT_DISTRIBUTION_ID=$$cf_id
