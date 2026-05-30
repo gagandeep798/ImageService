@@ -4,6 +4,11 @@
 # When mounted into LocalStack via ready.d, INIT_DIR defaults to /opt/localstack-init.
 set -euo pipefail
 
+# LocalStack requires credentials to be set; supply dummy values when absent
+export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-test}"
+export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-test}"
+export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INIT_DIR="${INIT_DIR:-$SCRIPT_DIR}"
 

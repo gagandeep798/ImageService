@@ -152,6 +152,22 @@ def generate_download_url(
     return url
 
 
+def generate_thumbnail_url(
+    client: boto3.client,
+    settings: Settings,
+    s3_key: str,
+) -> str:
+    """Generate a presigned GET URL for a thumbnail in the thumbnails bucket."""
+    url = client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": settings.thumbnails_bucket, "Key": s3_key},
+        ExpiresIn=settings.download_url_ttl_seconds,
+    )
+    if settings.s3_presigned_endpoint_url:
+        url = _rewrite_presigned_host(url, settings.s3_presigned_endpoint_url)
+    return url
+
+
 def _cloudfront_signed_url(settings: Settings, s3_key: str) -> str:
     """Build a CloudFront canned-policy signed URL using the RSA private key from Secrets Manager.
 

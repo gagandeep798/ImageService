@@ -1,8 +1,7 @@
 """GET /images — Paginated list with optional filters.
 
-When ``user_id`` is provided the query hits the UserImagesIndex GSI for an
-efficient per-user scan.  Without ``user_id`` a scatter-gather across all
-StatusIndex shards is performed and results are merged in-memory.
+By default the query is scoped to the logged-in caller via the UserImagesIndex
+GSI.  Admin callers may provide another ``user_id`` for cross-user access.
 
 Supported query params: ``user_id``, ``tag``, ``status`` (default ACTIVE),
 ``limit`` (default 20, max 100), ``cursor`` (base64 LastEvaluatedKey).
@@ -13,7 +12,7 @@ from aws_lambda_powertools.utilities.typing import LambdaContext
 from src.common import response as resp
 from src.common.config import get_settings
 from src.common.exceptions import ImageServiceError
-from src.common.middleware import get_request_id
+from src.common.middleware import get_caller_user_id, get_request_id, is_admin
 from src.repositories import image_repository as img_repo
 
 logger = Logger(service="image-service")
@@ -37,9 +36,20 @@ def handler(event: dict, context: LambdaContext) -> dict:
         qs = event.get("queryStringParameters") or {}
         user_id = qs.get("user_id")
         tag = qs.get("tag")
-        status = qs.get("status", "ACTIVE")
         limit = min(int(qs.get("limit", "20")), 100)
         cursor = qs.get("cursor")
+
+        caller_id = get_caller_user_id(event)
+        if not user_id:
+            user_id = caller_id
+
+        if user_id and user_id != caller_id and not is_admin(event):
+            from src.common.exceptions import ForbiddenError
+            raise ForbiddenError("Access denied")
+
+        status = qs.get("status")
+        if status is None:
+            status = None if user_id else "ACTIVE"
 
         if user_id:
             result = img_repo.list_by_user(settings, user_id, status, tag, limit, cursor)

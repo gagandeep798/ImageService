@@ -98,7 +98,7 @@ Resources:
   ImagesTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "image-service-images-${Env}"
+      TableName: image-service-images
       BillingMode: PAY_PER_REQUEST
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
@@ -134,7 +134,7 @@ Resources:
   UsersTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "image-service-users-${Env}"
+      TableName: image-service-users
       BillingMode: PAY_PER_REQUEST
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
@@ -153,7 +153,7 @@ Resources:
   MigrationsTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "image-service-migrations-${Env}"
+      TableName: image-service-migrations
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - {AttributeName: PK, AttributeType: S}

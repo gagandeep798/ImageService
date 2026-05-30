@@ -38,7 +38,6 @@ class UploadPartRequest(BaseModel):
 
     upload_id: str
     part_number: int = Field(ge=1, le=10000)
-    size_bytes: int = Field(gt=0)
 
 
 class UploadCompleteRequest(BaseModel):
@@ -96,6 +95,7 @@ class ImageResponse(BaseModel):
     width: int | None = None
     height: int | None = None
     thumbnail_keys: dict[str, str] = Field(default_factory=dict)
+    thumbnail_url: str | None = None
     created_at: str
     updated_at: str
 

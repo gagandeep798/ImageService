@@ -57,7 +57,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
             )["AuthenticationResult"]
         except ClientError as exc:
             code = exc.response["Error"]["Code"]
-            if code in ("NotAuthorizedException", "UserNotFoundException"):
+            if code in ("NotAuthorizedException", "UserNotFoundException", "InvalidPasswordException"):
                 return resp.error(ValidationError(_INVALID_MSG), request_id)
             raise
 

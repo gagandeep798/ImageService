@@ -20,7 +20,7 @@ AWS_CMD = aws$(if $(AWS_ENDPOINT_URL), --endpoint-url=$(AWS_ENDPOINT_URL),)
 .DEFAULT_GOAL := help
 
 .PHONY: help install \
-        docker-build localstack-up localstack-start localstack-down stop \
+        docker-build localstack-up localstack-start localstack-down stop stop-all \
         cognito-up cognito-down cognito-init setup \
         logs-list logs-tail \
         migrate-local migrate-staging migrate-dry-run \
@@ -59,7 +59,10 @@ localstack-start: ## Start LocalStack without rebuilding
 localstack-down: ## Stop LocalStack and remove volumes
 	$(DC) down -v
 
-stop: ## Stop everything: kill SAM local API and tear down LocalStack
+stop: ## Kill SAM local API (preserves LocalStack data); use localstack-down to also wipe volumes
+	-lsof -ti :3000 | xargs kill 2>/dev/null || true
+
+stop-all: ## Kill SAM local API AND tear down LocalStack with volumes (full reset)
 	-lsof -ti :3000 | xargs kill 2>/dev/null || true
 	$(DC) down -v
 
@@ -140,6 +143,7 @@ typecheck: ## Type-check with mypy (strict)
 # ── SAM ───────────────────────────────────────────────────────────────────────
 
 build: ## Build SAM project using Docker
+	docker run --rm -v "$(PWD)/.aws-sam:/workspace" alpine sh -c "rm -rf /workspace/build" 2>/dev/null || true
 	sam build --use-container
 
 start-api: localstack-start build ## Start SAM local API on http://localhost:3000

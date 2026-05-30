@@ -1,7 +1,7 @@
 version: "3.8"
 
 # All Docker-specific config (image version, port, runtime settings) is
-# loaded from .env (relative to this file in docker/).
+# loaded from .env and optional .env.local (relative to this file in docker/).
 
 networks:
   image-service-net:
@@ -9,7 +9,6 @@ networks:
 
 volumes:
   localstack_data:
-  cognito_data:
   frontend_node_modules:
 
 x-docker-env: &docker-env
@@ -35,7 +34,9 @@ services:
       DOCKER_HOST: unix:///var/run/docker.sock
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
       LOCALSTACK_ACCOUNT_ID: ${LOCALSTACK_ACCOUNT_ID:-000000000000}
+      LOCALSTACK_AUTH_TOKEN: ${LOCALSTACK_AUTH_TOKEN:-}
       GATEWAY_LISTEN: "0.0.0.0:${LOCALSTACK_PORT:-4566}"
+      LOCALSTACK_HOST: "localhost.localstack.cloud:${LOCALSTACK_PORT:-4566}"
       AWS_ENDPOINT_URL: "http://localhost:${LOCALSTACK_PORT:-4566}"
       APP_ENV: local
       INIT_DIR: /opt/localstack-init
@@ -60,7 +61,7 @@ services:
     ports:
       - "${COGNITO_PORT:-9229}:9229"
     volumes:
-      - cognito_data:/app/.cognito
+      - ./cognito/db:/app/.cognito/db
     networks:
       - image-service-net
     restart: unless-stopped

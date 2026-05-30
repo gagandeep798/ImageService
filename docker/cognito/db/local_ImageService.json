@@ -1,0 +1,182 @@
+{
+  "Users": {
+    "ecd3449d-6f57-46be-9340-5ab2f2b8155d": {
+      "Attributes": [
+        {
+          "Name": "sub",
+          "Value": "ecd3449d-6f57-46be-9340-5ab2f2b8155d"
+        },
+        {
+          "Name": "custom:user_id",
+          "Value": "usr_01kswjtj9yt08zyn8jpxsagmx6"
+        },
+        {
+          "Name": "email",
+          "Value": "test@example.com"
+        }
+      ],
+      "Enabled": true,
+      "Password": "Test1234!",
+      "RefreshTokens": [
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2duaXRvOnVzZXJuYW1lIjoiZWNkMzQ0OWQtNmY1Ny00NmJlLTkzNDAtNWFiMmYyYjgxNTVkIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNzgwMTQ5NDcxLCJqdGkiOiJjYjhkZjZlNC1mYmIxLTRlMWItYWQ1NS1kMTI0MGRlNWZlMTgiLCJleHAiOjE3ODA3NTQyNzEsImlzcyI6Imh0dHA6Ly8wLjAuMC4wOjkyMjkvbG9jYWxfSW1hZ2VTZXJ2aWNlIn0.TS4BTjwPs3YZNxypNwijrea8ERo7UdjQDmPXiW3XSi27v7WUrSqV3xUzN3K7fCX4FQJEBkT22F852yKgVOp55q7PyM8E2zfpS4CyFk5ecpRw3oh0KEIZeioY2jFpnmHjD3qIMRcgHi_Q6EcWZZovk9y41Z4ECM82b_Tbdjgf4jAqhyziJJaFlOC6jbRmwGWrlY0cPI-VqYoWHsg9xAf2U8VRN4nhbE3STbE3udECZVdFe6phlnNjTD40-jv8olvMiIbuioLpz21JiiUs-bUWMz6IqspfqzXUD_e6351VUhN5GhKer9k5d0M-5fzZkJzPiUCx25Oa5eBUYe-ZX1Oo4g"
+      ],
+      "UserCreateDate": "2026-05-30T13:57:51.553Z",
+      "UserLastModifiedDate": "2026-05-30T13:57:51.556Z",
+      "Username": "ecd3449d-6f57-46be-9340-5ab2f2b8155d",
+      "UserStatus": "CONFIRMED",
+      "ConfirmationCode": "889428"
+    },
+    "447bd405-8cbe-479c-8a27-20716926d0b3": {
+      "Attributes": [
+        {
+          "Name": "sub",
+          "Value": "447bd405-8cbe-479c-8a27-20716926d0b3"
+        },
+        {
+          "Name": "custom:user_id",
+          "Value": "usr_01kswk0dx5s5emype02p4hvnrz"
+        },
+        {
+          "Name": "email",
+          "Value": "newuser@example.com"
+        }
+      ],
+      "Enabled": true,
+      "Password": "Test1234!",
+      "RefreshTokens": [
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2duaXRvOnVzZXJuYW1lIjoiNDQ3YmQ0MDUtOGNiZS00NzljLThhMjctMjA3MTY5MjZkMGIzIiwiZW1haWwiOiJuZXd1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzgwMTQ5NjYzLCJqdGkiOiJlZDQxMTQ0MC02ZGQ2LTRlNGItYWU4Yi1iNzNiMzUxYjc4ODgiLCJleHAiOjE3ODA3NTQ0NjMsImlzcyI6Imh0dHA6Ly8wLjAuMC4wOjkyMjkvbG9jYWxfSW1hZ2VTZXJ2aWNlIn0.oZ6cPINbTMUfoqnSSxNA3lrgLXVT6H5wgbj-C-HcPv1zEVvktT2XpoGZMvV4kWlJ_hr9_c2VsvhPC_9iUtUIc1zEfFqsRFpA4Rxb5YauCdzswsk_lPObEUzYESIA4dDeYLHP5mc7M2-soZBylpIkK4E_5NHwtiI0ZkglB4A5ZpBlQV2SRPItb7QQ5gdimhA2qYX1pekf0lSEJYPP2L1RSDCkeUbu-QPtzVLjy513UF9WamwCcRLahTUYrVlM-yVxVLVBcXuC-Sgy_dO8Ae4utPYvMJ6c01MZjta6sDE2ur2EoCD0oAk2Yxr2DyxVgjZQUNY4685NaCoEBwpm8TbE7w",
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2duaXRvOnVzZXJuYW1lIjoiNDQ3YmQ0MDUtOGNiZS00NzljLThhMjctMjA3MTY5MjZkMGIzIiwiZW1haWwiOiJuZXd1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzgwMTQ5Njc0LCJqdGkiOiI4NTM0ZmNhOC01MzQ0LTQzMDktOGM2Zi02OGRkZjY4MmFhZTUiLCJleHAiOjE3ODA3NTQ0NzQsImlzcyI6Imh0dHA6Ly8wLjAuMC4wOjkyMjkvbG9jYWxfSW1hZ2VTZXJ2aWNlIn0.n4X_cqv42qTTAJwYBXuI93REUIsDY5htlis4pLoiajHXhvCpBYV9GJQEia19udLonbaFaMoOIkMDK5ez75zvFLpnMZ8nMscFdLq24dVmOwrfLcwwH36Id53aztwCTKQac8V7npQuJhyGOxImoc8_AMWJP7W0v0ngC70KV1UH-DGk6-tZKft7QftfjpYRKOPopVFRppdRY0E5pguoPIOqiCWYwYh7ZyuLCIGXyFWB3BfDAL5ECgB9VvMunVcOvgLazrHFUN5OEmsA-EKkzys828r6pDh6-BUavqOafk5cBVZXD2hYGxNdxgNqmuyJ7Xw0SZTKYHmfY75YP7_p5dv3Cg"
+      ],
+      "UserCreateDate": "2026-05-30T14:01:03.655Z",
+      "UserLastModifiedDate": "2026-05-30T14:01:03.657Z",
+      "Username": "447bd405-8cbe-479c-8a27-20716926d0b3",
+      "UserStatus": "CONFIRMED",
+      "ConfirmationCode": "572841"
+    },
+    "344c91ed-3451-4d9d-995b-5c08fb78b56b": {
+      "Attributes": [
+        {
+          "Name": "sub",
+          "Value": "344c91ed-3451-4d9d-995b-5c08fb78b56b"
+        },
+        {
+          "Name": "custom:user_id",
+          "Value": "usr_01kswk8wba3s7rnvgetctpmsfp"
+        },
+        {
+          "Name": "email",
+          "Value": "user1@l.com"
+        }
+      ],
+      "Enabled": true,
+      "Password": "user1user1",
+      "RefreshTokens": [
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2duaXRvOnVzZXJuYW1lIjoiMzQ0YzkxZWQtMzQ1MS00ZDlkLTk5NWItNWMwOGZiNzhiNTZiIiwiZW1haWwiOiJ1c2VyMUBsLmNvbSIsImlhdCI6MTc4MDE0OTk0MCwianRpIjoiYmE2YTVmN2ItMWUwMy00NzEyLWE3MTktZWJlYTViOGYyNjNhIiwiZXhwIjoxNzgwNzU0NzQwLCJpc3MiOiJodHRwOi8vMC4wLjAuMDo5MjI5L2xvY2FsX0ltYWdlU2VydmljZSJ9.Kh-DeuVGvCDA6IS7Yq4WDzXNQFcCdYpFJWIn504nqfyCkX8_uwXHUEHgC22DRSp7lhwPYNnP2NVBpJEzXoXAeVlu6zBmDgrQzzgUKUxWukFS416gXnraxebgwN7KKKrPc96YBxpghZuoEj9ZBGJIlX4baQvCy2UYxvx_h-xka6sbEA0G_3r9P4qdlvMNOonnjz3-FygHMpKq-mLm1BCbfQ0xyszV7C3mcmP53dv1Pyu-GpEvZcbAWk-ej1CbkbcD6I13L__U2QCvJ0qRgG5GTNNBxX3sM3Dpnl1YJ3WyPxhaWxRj71FYsorXS8wUqp13kZG4qZnfOHf8mtNwY6U_RQ",
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2duaXRvOnVzZXJuYW1lIjoiMzQ0YzkxZWQtMzQ1MS00ZDlkLTk5NWItNWMwOGZiNzhiNTZiIiwiZW1haWwiOiJ1c2VyMUBsLmNvbSIsImlhdCI6MTc4MDE1MDEwNCwianRpIjoiMDkyYmJjMTEtYTk3NS00ZjFiLTg4MzQtMmU2M2Y4MzNiMTY4IiwiZXhwIjoxNzgwNzU0OTA0LCJpc3MiOiJodHRwOi8vMC4wLjAuMDo5MjI5L2xvY2FsX0ltYWdlU2VydmljZSJ9.KriJzWSRL6LIYXcaRTXnkwOyil8bs0hPnceXyiS2Yk65y6smbyqN75lT_X-2lcYzMviHhMcptAZum3T9J4Y0Mq5nrqoUwRHEo9c2yS8eTc7HvnQUUiahpZIOfp2aFGu2x_Oc_hoT022VyKg7bjHFc07AiVDUOXTyMIbs269KW7ey2AnVlAD7EKPPgsJexazZD0sRNy1OPqIgJ0R8Cj62vvyz6JZRHvdNaA8VtYEmhoCbIP9SdssPOvWav2iw2l4IRAMVUOElZfrcsBl1MbuktDns7ZSj91K5F_MTGhJ3RnQBUJ_qgmgVWk0TRR3OMaZD-2m61pCz67vtivM6FSaiUg"
+      ],
+      "UserCreateDate": "2026-05-30T14:05:40.592Z",
+      "UserLastModifiedDate": "2026-05-30T14:05:40.596Z",
+      "Username": "344c91ed-3451-4d9d-995b-5c08fb78b56b",
+      "UserStatus": "CONFIRMED",
+      "ConfirmationCode": "985179"
+    },
+    "7f66dd5c-075c-458e-8371-b1d7e8a729e0": {
+      "Attributes": [
+        {
+          "Name": "sub",
+          "Value": "7f66dd5c-075c-458e-8371-b1d7e8a729e0"
+        },
+        {
+          "Name": "custom:user_id",
+          "Value": "usr_01kswkk8ct7pqacxepast4n1p4"
+        },
+        {
+          "Name": "email",
+          "Value": "dev@example.com"
+        }
+      ],
+      "Enabled": true,
+      "Password": "Test1234!",
+      "RefreshTokens": [
+        "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2duaXRvOnVzZXJuYW1lIjoiN2Y2NmRkNWMtMDc1Yy00NThlLTgzNzEtYjFkN2U4YTcyOWUwIiwiZW1haWwiOiJkZXZAZXhhbXBsZS5jb20iLCJpYXQiOjE3ODAxNTAyODAsImp0aSI6IjQ1NDA4OWIwLWZmZjUtNGQ3OC05ZTE3LWE3OTI1ZmM0Nzc3OCIsImV4cCI6MTc4MDc1NTA4MCwiaXNzIjoiaHR0cDovLzAuMC4wLjA6OTIyOS9sb2NhbF9JbWFnZVNlcnZpY2UifQ.HjRxBe41HZj21EVKeB7jFGWr3pL9NX-9ye2Fj8vRA-Xm2mGIErgsqV2bLMODpKKc52kd1000noTT5j31-vA8RROE7pDvH15rIsGbQOQAg2Zik_hc8h96T93HXovItWpHm32Q9PkseAOgdj9JuW5Lb_NHokXPJ0FAg4FWOMS0HJstcCNEeHLOVWIT_8vvMxyJ3v1oFSBUIPGTkqt2BfqOoKl_ZcIBhizdSF8iWUI6FTYWOmP_XQMr9VDgczBt3ol2WERKNMRPehx5e89BAVS6xacVviaj0dTjSdTjq1CUfJB935eklr2dTt8E0nJl8ktRLmUjex7P3MXKG2UXwsjzEA"
+      ],
+      "UserCreateDate": "2026-05-30T14:11:20.610Z",
+      "UserLastModifiedDate": "2026-05-30T14:11:20.612Z",
+      "Username": "7f66dd5c-075c-458e-8371-b1d7e8a729e0",
+      "UserStatus": "CONFIRMED",
+      "ConfirmationCode": "604658"
+    }
+  },
+  "Options": {
+    "Policies": {
+      "PasswordPolicy": {
+        "MinimumLength": 8,
+        "RequireUppercase": true,
+        "RequireLowercase": true,
+        "RequireNumbers": true,
+        "RequireSymbols": true,
+        "TemporaryPasswordValidityDays": 7
+      }
+    },
+    "LambdaConfig": {},
+    "SchemaAttributes": [
+      {
+        "Name": "sub",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": false,
+        "Required": true,
+        "StringAttributeConstraints": {
+          "MinLength": "1",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "email",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "email_verified",
+        "AttributeDataType": "Boolean",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false
+      },
+      {
+        "Name": "custom:user_id",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": false,
+        "Required": false,
+        "StringAttributeConstraints": {}
+      }
+    ],
+    "VerificationMessageTemplate": {
+      "DefaultEmailOption": "CONFIRM_WITH_CODE"
+    },
+    "MfaConfiguration": "OFF",
+    "EstimatedNumberOfUsers": 0,
+    "EmailConfiguration": {
+      "EmailSendingAccount": "COGNITO_DEFAULT"
+    },
+    "AdminCreateUserConfig": {
+      "AllowAdminCreateUserOnly": false,
+      "UnusedAccountValidityDays": 7
+    },
+    "UsernameAttributes": [
+      "email"
+    ],
+    "Arn": "arn:aws:cognito-idp:local:local:userpool/local_ImageService",
+    "CreationDate": "2026-01-01T00:00:00.000Z",
+    "Id": "local_ImageService",
+    "LastModifiedDate": "2026-01-01T00:00:00.000Z",
+    "Name": "image-service-users"
+  }
+}

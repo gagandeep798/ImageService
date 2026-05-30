@@ -266,6 +266,11 @@ def list_by_user(
         filter_expr = "#s = :status"
         expr_attr_names["#s"] = "status"
         expr_attr_values[":status"] = status_filter
+    else:
+        filter_expr = "#s <> :deleted AND #s <> :aborted"
+        expr_attr_names["#s"] = "status"
+        expr_attr_values[":deleted"] = "DELETED"
+        expr_attr_values[":aborted"] = "ABORTED"
 
     if tag_filter:
         tag_clause = "contains(tags, :tag)"
@@ -289,7 +294,7 @@ def list_by_user(
     with monitor("images.list_user"):
         resp = table.query(**kwargs)
 
-    items = [_to_response(item) for item in resp.get("Items", [])]
+    items = [_to_response(settings, item) for item in resp.get("Items", [])]
     next_cursor = None
     if resp.get("LastEvaluatedKey"):
         next_cursor = base64.b64encode(json.dumps(resp["LastEvaluatedKey"]).encode()).decode()
@@ -372,7 +377,7 @@ async def _query_shard(
             kwargs["ExclusiveStartKey"] = json.loads(base64.b64decode(cursor).decode())
 
         resp = await table.query(**kwargs)
-        return [_to_response(item) for item in resp.get("Items", [])]
+        return [_to_response(settings, item) for item in resp.get("Items", [])]
 
 
 def get_parts(settings: Settings, image_id: str) -> dict:
@@ -420,7 +425,28 @@ def _to_record(item: dict) -> ImageRecord:
     )
 
 
-def _to_response(item: dict) -> ImageResponse:
+def to_response(settings: Settings, record: ImageRecord) -> ImageResponse:
+    """Convert an ImageRecord into a public ImageResponse, signing the thumbnail URL."""
+    thumbnail_url = None
+    if record.thumbnail_keys:
+        thumb_key = (
+            record.thumbnail_keys.get("400")
+            or record.thumbnail_keys.get("128")
+            or record.thumbnail_keys.get("1200")
+            or next(iter(record.thumbnail_keys.values()), None)
+        )
+        if thumb_key:
+            from src.common.s3 import get_s3_presign_client, generate_thumbnail_url
+            s3_client = get_s3_presign_client(settings)
+            thumbnail_url = generate_thumbnail_url(s3_client, settings, thumb_key)
+
+    return ImageResponse(
+        thumbnail_url=thumbnail_url,
+        **record.model_dump(exclude={"s3_key", "upload_id", "deleted_at"})
+    )
+
+
+def _to_response(settings: Settings, item: dict) -> ImageResponse:
     """Convert a DynamoDB item into a public ``ImageResponse``, stripping internal fields."""
     record = _to_record(item)
-    return ImageResponse(**record.model_dump(exclude={"s3_key", "upload_id", "deleted_at"}))
+    return to_response(settings, record)

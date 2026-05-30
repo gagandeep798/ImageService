@@ -16,14 +16,13 @@ export type ImageStatus =
 export interface ImageRecord {
   image_id: string
   user_id: string
-  title: string
+  title: string | null
   status: ImageStatus
   content_type: string
-  size_bytes: number
-  s3_key: string
+  size_bytes: number | null
   created_at: string
   updated_at: string
-  thumbnail_url?: string
+  thumbnail_url?: string | null
 }
 
 export interface ListImagesResponse {
