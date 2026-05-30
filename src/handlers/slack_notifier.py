@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 import urllib.request
 from typing import Optional
 
@@ -74,7 +73,8 @@ def _post_to_slack(webhook_url: str, message: dict) -> None:
 
 def handler(event: dict, context: LambdaContext) -> dict:  # noqa: ARG001
     """Lambda entry point — formats CloudWatch alarm SNS notifications and posts them to Slack."""
-    webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "")
+    from src.common.config import get_settings
+    webhook_url = get_settings().slack_webhook_url
     if not webhook_url:
         logger.warning("SLACK_WEBHOOK_URL not configured")
         return {"ok": False}

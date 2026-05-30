@@ -4,12 +4,10 @@ The ``ttl`` attribute (Unix epoch integer) is set by soft-delete and GDPR-
 erasure operations.  DynamoDB deletes items asynchronously after the epoch
 passes, which triggers DynamoDB Streams events used by the S3 cleanup Lambda.
 """
-import os
-
 MIGRATION_NUMBER = 4
 MIGRATION_NAME = "enable_ttl"
 
-USERS_TABLE = os.environ.get("USERS_TABLE_NAME", "image-service-users")
+USERS_TABLE = "image-service-users"
 
 
 def up(dynamo: object, images_table_name: str) -> None:

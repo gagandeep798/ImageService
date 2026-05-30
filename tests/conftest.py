@@ -41,6 +41,8 @@ TEST_SETTINGS = Settings(
     cloudfront_key_pair_id="LOCAL_DEV",
     slack_webhook_url="",
     env="test",
+    service_version="0.1.0",
+    secretsmanager_endpoint_url=None,
 )
 
 

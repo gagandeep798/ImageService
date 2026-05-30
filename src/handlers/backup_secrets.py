@@ -7,13 +7,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from datetime import datetime, timezone
 
 import boto3
 from aws_lambda_powertools import Logger, Metrics
 from aws_lambda_powertools.metrics import MetricUnit
 from aws_lambda_powertools.utilities.typing import LambdaContext
+
+from src.common.config import get_settings
 
 logger = Logger(service="image-service")
 metrics = Metrics(namespace="ImageService")
@@ -23,21 +24,21 @@ _SM_PREFIX = "image-service/"
 
 def _sm_client() -> boto3.client:
     """Build a Secrets Manager client, routing to LocalStack when an endpoint URL is set."""
-    kwargs: dict = {"region_name": os.environ.get("AWS_DEFAULT_REGION", "us-east-1")}
-    endpoint = os.environ.get("SECRETSMANAGER_ENDPOINT_URL")
-    if endpoint:
-        kwargs["endpoint_url"] = endpoint
+    settings = get_settings()
+    kwargs: dict = {"region_name": settings.aws_region}
+    if settings.secretsmanager_endpoint_url:
+        kwargs["endpoint_url"] = settings.secretsmanager_endpoint_url
     return boto3.client("secretsmanager", **kwargs)
 
 
 def _dynamo_table() -> object:
     """Return the boto3 Table for the secret-hashes tracking table."""
-    endpoint = os.environ.get("DYNAMODB_ENDPOINT_URL")
-    kwargs: dict = {"region_name": os.environ.get("AWS_DEFAULT_REGION", "us-east-1")}
-    if endpoint:
-        kwargs["endpoint_url"] = endpoint
+    settings = get_settings()
+    kwargs: dict = {"region_name": settings.aws_region}
+    if settings.dynamodb_endpoint_url:
+        kwargs["endpoint_url"] = settings.dynamodb_endpoint_url
     resource = boto3.resource("dynamodb", **kwargs)
-    return resource.Table(os.environ.get("SECRET_HASHES_TABLE_NAME", "image-service-secret-hashes"))
+    return resource.Table(settings.secret_hashes_table_name)
 
 
 def _hash_secret(name: str, value: str) -> str:
@@ -62,8 +63,7 @@ def handler(event: dict, context: LambdaContext) -> dict:  # noqa: ARG001
     now = datetime.now(timezone.utc).isoformat()
     ttl_90d = int(datetime.now(timezone.utc).timestamp()) + 90 * 86400
 
-    env = os.environ.get("ENV", "local")
-    prefix = f"{_SM_PREFIX}{env}/"
+    prefix = f"{_SM_PREFIX}{get_settings().env}/"
 
     paginator = sm.get_paginator("list_secrets")
     unexpected_changes = 0

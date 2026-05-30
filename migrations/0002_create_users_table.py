@@ -4,12 +4,10 @@ The ``EmailHashIndex`` allows efficient lookup by hashed email for login flows
 without exposing plaintext email as a DynamoDB key.  Streams are enabled so
 that GDPR-erasure events can trigger downstream cleanup via DynamoDB Streams.
 """
-import os
-
 MIGRATION_NUMBER = 2
 MIGRATION_NAME = "create_users_table"
 
-USERS_TABLE = os.environ.get("USERS_TABLE_NAME", "image-service-users")
+USERS_TABLE = "image-service-users"
 
 
 def up(dynamo: object, images_table_name: str) -> None:

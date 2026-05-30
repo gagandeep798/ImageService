@@ -12,25 +12,28 @@ Usage::
 The script prompts for confirmation before making any changes.
 """
 import argparse
-import os
 import sys
 import boto3
 from datetime import datetime, timezone
 
+from src.common.config import get_env_settings
+
 def get_dynamo(env: str) -> boto3.resource:
     """Build a DynamoDB boto3 resource for the target environment."""
-    endpoint = os.environ.get("DYNAMODB_ENDPOINT_URL") if env == "local" else None
+    cfg = get_env_settings()
+    endpoint = cfg.dynamodb_endpoint_url if env == "local" else None
     return boto3.resource(
         "dynamodb",
         endpoint_url=endpoint,
-        region_name=os.environ.get("AWS_DEFAULT_REGION", "us-east-1"),
+        region_name=cfg.aws_region,
     )
 
 def erase_user(user_id: str, env: str) -> None:
     """Soft-delete all images and the user record, setting GDPR fields and DynamoDB TTL."""
+    cfg = get_env_settings()
     dynamo = get_dynamo(env)
-    images_table = dynamo.Table(os.environ.get("IMAGES_TABLE_NAME", "image-service-images"))
-    users_table = dynamo.Table(os.environ.get("USERS_TABLE_NAME", "image-service-users"))
+    images_table = dynamo.Table(cfg.images_table_name)
+    users_table = dynamo.Table(cfg.users_table_name)
 
     now = datetime.now(timezone.utc).isoformat()
     ttl_epoch = int(datetime.now(timezone.utc).timestamp()) + 90 * 86400

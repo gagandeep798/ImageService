@@ -23,7 +23,6 @@ import argparse
 import hashlib
 import importlib
 import inspect
-import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,17 +31,18 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
+from src.common.config import get_env, get_env_settings
+
 MIGRATIONS_DIR = Path(__file__).parent
-MIGRATION_TABLE = os.environ.get("MIGRATIONS_TABLE_NAME", "image-service-migrations")
+MIGRATION_TABLE = "image-service-migrations"
 
 
 def _dynamo(env: str) -> Any:
     """Create a boto3 DynamoDB resource pointed at the correct endpoint for ``env``."""
-    endpoint = os.environ.get("DYNAMODB_ENDPOINT_URL") if env == "local" else None
-    region = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
-    kwargs: dict = {"region_name": region}
-    if endpoint:
-        kwargs["endpoint_url"] = endpoint
+    cfg = get_env_settings()
+    kwargs: dict = {"region_name": cfg.aws_region}
+    if env == "local" and cfg.dynamodb_endpoint_url:
+        kwargs["endpoint_url"] = cfg.dynamodb_endpoint_url
     return boto3.resource("dynamodb", **kwargs)
 
 
@@ -121,7 +121,7 @@ def run(env: str, dry_run: bool = False) -> None:
         print(f"{'[DRY-RUN] ' if dry_run else ''}Applying migration {name}...")
         if not dry_run:
             try:
-                mod.up(dynamo, os.environ.get("IMAGES_TABLE_NAME", "image-service-images"))
+                mod.up(dynamo, get_env_settings().images_table_name)
             except Exception as exc:
                 print(f"FAILED migration {name}: {exc}")
                 sys.exit(1)
@@ -132,7 +132,7 @@ def run(env: str, dry_run: bool = False) -> None:
                 "name": name,
                 "applied_at": now,
                 "checksum": checksum,
-                "applied_by": os.environ.get("GITHUB_ACTOR", os.environ.get("USER", "unknown")),
+                "applied_by": get_env("GITHUB_ACTOR", get_env("USER", "unknown")),
             })
             print(f"  ✓ {name}")
 
@@ -153,7 +153,7 @@ def rollback(env: str, number: int) -> None:
         sys.exit(1)
 
     print(f"Rolling back migration {name}...")
-    mod.down(dynamo, os.environ.get("IMAGES_TABLE_NAME", "image-service-images"))
+    mod.down(dynamo, get_env_settings().images_table_name)
     table.delete_item(Key={"PK": f"MIG#{number:04d}", "SK": "RECORD"})
     print(f"  ✓ rolled back {name}")
 

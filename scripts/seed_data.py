@@ -9,27 +9,25 @@ Usage::
 
     python scripts/seed_data.py
 """
-import os
 import boto3
 from ulid import ULID
 from datetime import datetime, timezone
 
-ENDPOINT = os.environ.get("DYNAMODB_ENDPOINT_URL", "http://localhost:8080/api")
-REGION = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
-IMAGES_TABLE = os.environ.get("IMAGES_TABLE_NAME", "image-service-images")
-USERS_TABLE = os.environ.get("USERS_TABLE_NAME", "image-service-users")
+from src.common.config import get_env_settings
+
+_cfg = get_env_settings()
 
 dynamo = boto3.resource(
     "dynamodb",
-    endpoint_url=ENDPOINT,
-    region_name=REGION,
+    endpoint_url=_cfg.dynamodb_endpoint_url,
+    region_name=_cfg.aws_region,
     aws_access_key_id="test",
     aws_secret_access_key="test",
 )
 
 def seed_users() -> list[str]:
     """Write 3 test user records and return their generated user IDs."""
-    table = dynamo.Table(USERS_TABLE)
+    table = dynamo.Table(_cfg.users_table_name)
     user_ids = [f"usr_{ULID()}" for _ in range(3)]
     now = datetime.now(timezone.utc).isoformat()
     for uid in user_ids:
@@ -53,7 +51,7 @@ def seed_users() -> list[str]:
 
 def seed_images(user_ids: list[str]) -> None:
     """Write 2 ACTIVE placeholder image records per user."""
-    table = dynamo.Table(IMAGES_TABLE)
+    table = dynamo.Table(_cfg.images_table_name)
     now = datetime.now(timezone.utc).isoformat()
     for uid in user_ids:
         for i in range(2):
