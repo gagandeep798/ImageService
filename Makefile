@@ -160,7 +160,7 @@ local: localstack-start build ## Run local dev stack — LocalStack + SAM API on
 	    CognitoClientId=$(COGNITO_CLIENT_ID) \
 	    CognitoEndpointUrl=http://image-service-cognito-local:9229
 
-dev: localstack-start build ## Full CloudFormation deploy to LocalStack + SAM API on :3000 + frontend on :5173
+dev: stop localstack-start build ## Full CloudFormation deploy to LocalStack + SAM API on :3000 + frontend on :5173
 	@AWS_ENDPOINT_URL=http://localhost:4566 aws cloudformation delete-stack \
 	  --stack-name image-service-local --region us-east-1 2>/dev/null || true
 	@AWS_ENDPOINT_URL=http://localhost:4566 aws cloudformation wait stack-delete-complete \
