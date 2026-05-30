@@ -1,4 +1,4 @@
-.PHONY: install fetch-secrets docker-build localstack-up localstack-down \
+.PHONY: install docker-build localstack-up localstack-down \
         migrate-local migrate-staging migrate-dry-run \
         test-unit test-integration test lint format typecheck \
         build start-api logs-list logs-tail seed \
@@ -21,10 +21,6 @@ AWS_CMD = aws$(if $(AWS_ENDPOINT_URL), --endpoint-url=$(AWS_ENDPOINT_URL),)
 
 install:
 	poetry install
-
-fetch-secrets:
-	@mkdir -p docker
-	@bash scripts/fetch_secrets.sh
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 

@@ -34,7 +34,6 @@ Globals:
         IMAGES_TABLE_NAME: !Ref ImagesTable
         USERS_TABLE_NAME: !Ref UsersTable
         MIGRATIONS_TABLE_NAME: !Ref MigrationsTable
-        SECRET_HASHES_TABLE_NAME: !Ref SecretHashesTable
         ORIGINALS_BUCKET: !Ref OriginalsBucket
         THUMBNAILS_BUCKET: !Ref ThumbnailsBucket
         QUARANTINE_BUCKET: !Ref QuarantineBucket
@@ -130,20 +129,6 @@ Resources:
         - {AttributeName: PK, KeyType: HASH}
         - {AttributeName: SK, KeyType: RANGE}
 
-  SecretHashesTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "image-service-secret-hashes-${Env}"
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - {AttributeName: PK, AttributeType: S}
-        - {AttributeName: SK, AttributeType: S}
-      KeySchema:
-        - {AttributeName: PK, KeyType: HASH}
-        - {AttributeName: SK, KeyType: RANGE}
-      TimeToLiveSpecification:
-        AttributeName: ttl
-        Enabled: true
 
   # ── S3 Buckets ───────────────────────────────────────────────────────────────
 
@@ -532,9 +517,6 @@ Resources:
             - Effect: Allow
               Action: [s3:CreateMultipartUpload]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   UploadPartFunction:
     Type: AWS::Serverless::Function
@@ -558,9 +540,6 @@ Resources:
             - Effect: Allow
               Action: [s3:UploadPart]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   UploadCompleteFunction:
     Type: AWS::Serverless::Function
@@ -584,9 +563,6 @@ Resources:
             - Effect: Allow
               Action: [s3:CompleteMultipartUpload]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   UploadAbortFunction:
     Type: AWS::Serverless::Function
@@ -612,9 +588,6 @@ Resources:
             - Effect: Allow
               Action: [s3:AbortMultipartUpload]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   FinalizeUploadFunction:
     Type: AWS::Serverless::Function
@@ -643,9 +616,6 @@ Resources:
             - Effect: Allow
               Action: [s3:GetObject, s3:HeadObject]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   ScanCompleteFunction:
     Type: AWS::Serverless::Function
@@ -672,9 +642,6 @@ Resources:
               Resource:
                 - !Sub "${OriginalsBucket.Arn}/*"
                 - !Sub "${QuarantineBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   GenerateThumbnailsFunction:
     Type: AWS::Serverless::Function
@@ -704,9 +671,6 @@ Resources:
             - Effect: Allow
               Action: [s3:PutObject]
               Resource: !Sub "${ThumbnailsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   GetImageFunction:
     Type: AWS::Serverless::Function
@@ -724,11 +688,6 @@ Resources:
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref ImagesTable
-        - Statement:
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
-
   ListImagesFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -745,11 +704,6 @@ Resources:
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref ImagesTable
-        - Statement:
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
-
   DeleteImageFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -772,9 +726,6 @@ Resources:
             - Effect: Allow
               Action: sts:AssumeRole
               Resource: !GetAtt DynamoDBDeleteRole.Arn
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   DownloadFunction:
     Type: AWS::Serverless::Function
@@ -796,9 +747,6 @@ Resources:
             - Effect: Allow
               Action: [s3:GetObject]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   HealthFunction:
     Type: AWS::Serverless::Function
@@ -822,9 +770,6 @@ Resources:
             - Effect: Allow
               Action: [s3:HeadBucket]
               Resource: !Sub "${OriginalsBucket.Arn}"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   GdprDeleteUserFunction:
     Type: AWS::Serverless::Function
@@ -849,9 +794,6 @@ Resources:
             - Effect: Allow
               Action: sts:AssumeRole
               Resource: !GetAtt DynamoDBDeleteRole.Arn
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   SlackNotifierFunction:
     Type: AWS::Serverless::Function
@@ -864,12 +806,6 @@ Resources:
           Type: SNS
           Properties:
             Topic: !Ref AlertsTopic
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/alerts"
-
   ScaleLambdaFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -881,26 +817,6 @@ Resources:
             - Effect: Allow
               Action: [lambda:GetFunctionConcurrency, lambda:PutFunctionConcurrency]
               Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:image-service-*"
-
-  BackupSecretsFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub "image-service-backup-secrets-${Env}"
-      CodeUri: src/
-      Handler: handlers.backup_secrets.handler
-      Timeout: 120
-      Events:
-        DailySchedule:
-          Type: Schedule
-          Properties:
-            Schedule: cron(0 2 * * ? *)  # 02:00 UTC daily
-      Policies:
-        - DynamoDBWritePolicy:
-            TableName: !Ref SecretHashesTable
-        - Statement:
-            - Effect: Allow
-              Action: [secretsmanager:ListSecrets, secretsmanager:GetSecretValue]
-              Resource: "*"
 
   # ── API Gateway ───────────────────────────────────────────────────────────────
 

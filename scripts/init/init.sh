@@ -11,7 +11,6 @@ bash "$INIT_DIR/vpc.sh"
 bash "$INIT_DIR/s3.sh"
 bash "$INIT_DIR/dynamodb.sh"
 bash "$INIT_DIR/sqs.sh"
-bash "$INIT_DIR/secrets.sh"
 bash "$INIT_DIR/cognito.sh"
 bash "$INIT_DIR/migrations.sh"
 
