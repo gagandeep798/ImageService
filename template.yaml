@@ -183,15 +183,6 @@ Resources:
             AllowedOrigins: ["*"]
             ExposedHeaders: [ETag]
             MaxAge: 3600
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: prefix
-                    Value: originals/
-            Function: !GetAtt FinalizeUploadFunction.Arn
       LifecycleConfiguration:
         Rules:
           - Id: transition-to-ia

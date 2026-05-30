@@ -26,7 +26,7 @@ AWS_CMD = aws$(if $(AWS_ENDPOINT_URL), --endpoint-url=$(AWS_ENDPOINT_URL),)
         migrate-local migrate-staging migrate-dry-run \
         test-unit test-integration test \
         lint format typecheck \
-        build start-api deploy-pipeline-local deploy-local \
+        build start-api deploy-pipeline-local deploy-local local-up \
         deploy-dev deploy-staging deploy-prod \
         frontend-install frontend-dev frontend-build \
         deploy-frontend-staging deploy-frontend-prod \
@@ -151,7 +151,7 @@ deploy-pipeline-local: ## Deploy finalize/scan/thumbnail Lambdas to LocalStack a
 	bash scripts/deploy-pipeline-local.sh
 
 deploy-local: localstack-start build ## Deploy full CloudFormation stack to LocalStack via samlocal
-	poetry run samlocal deploy \
+	AWS_ENDPOINT_URL=http://localhost:4566 poetry run samlocal deploy \
 	  --config-env local \
 	  --parameter-overrides \
 	    Env=local \
@@ -162,8 +162,21 @@ deploy-local: localstack-start build ## Deploy full CloudFormation stack to Loca
 	    CognitoUserPoolId=$(COGNITO_USER_POOL_ID) \
 	    CognitoClientId=$(COGNITO_CLIENT_ID) \
 	    CognitoEndpointUrl=http://image-service-cognito-local:9229
+	AWS_ENDPOINT_URL=http://localhost:4566 bash scripts/wire-notifications.sh local
 
-start-api: localstack-start build deploy-pipeline-local ## Start SAM local API on http://localhost:3000
+local-up: deploy-local ## Deploy to LocalStack + start SAM API (full local stack in one command)
+	sam local start-api \
+	  --docker-network image-service-net \
+	  --port 3000 \
+	  --parameter-overrides \
+	    AwsEndpointUrl=http://image-service-localstack:4566 \
+	    S3PresignedEndpointUrl=http://localhost:4566 \
+	    PiiPepper=$(PII_PEPPER) \
+	    CognitoUserPoolId=$(COGNITO_USER_POOL_ID) \
+	    CognitoClientId=$(COGNITO_CLIENT_ID) \
+	    CognitoEndpointUrl=http://image-service-cognito-local:9229
+
+start-api: localstack-start build deploy-pipeline-local ## Start SAM local API on http://localhost:3000 (fast dev loop)
 	sam local start-api \
 	  --docker-network image-service-net \
 	  --port 3000 \
@@ -183,6 +196,7 @@ deploy-dev: build ## Build and deploy to dev; run migrations
 
 deploy-staging: build ## Build and deploy to staging; run migrations; deploy frontend
 	sam deploy --config-env staging --no-fail-on-empty-changeset
+	bash scripts/wire-notifications.sh staging
 	poetry run python migrations/runner.py --env staging
 	$(MAKE) deploy-frontend-staging
 
@@ -190,6 +204,7 @@ deploy-prod: build ## Build and deploy to prod (3s abort window); run migrations
 	@echo "Deploying to PRODUCTION. Ctrl-C to abort..."
 	@sleep 3
 	sam deploy --config-env prod --no-fail-on-empty-changeset
+	bash scripts/wire-notifications.sh prod
 	poetry run python migrations/runner.py --env prod
 	$(MAKE) deploy-frontend-prod
 
