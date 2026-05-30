@@ -40,7 +40,7 @@ export interface InitiateUploadResponse {
 }
 
 export interface PartUrlResponse {
-  upload_url: string
+  presigned_part_url: string
   part_number: number
 }
 
