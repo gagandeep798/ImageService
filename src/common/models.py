@@ -110,12 +110,10 @@ class ListImagesResponse(BaseModel):
 
 
 class UserRecord(BaseModel):
-    """DynamoDB user profile record."""
+    """DynamoDB user profile record. Credentials are owned by Cognito."""
 
     user_id: str
     display_name: str
-    email_hash: str
-    password_hash: str
     status: str
     storage_used_bytes: int = 0
     storage_quota_bytes: int = 10 * 1024 * 1024 * 1024
