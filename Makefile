@@ -146,7 +146,8 @@ build: ## Build SAM project using Docker
 
 # ── Environments ──────────────────────────────────────────────────────────────
 
-local: localstack-start build ## Run local dev stack — LocalStack + SAM API on http://localhost:3000
+local: localstack-start build ## Run local dev stack — LocalStack + SAM API on :3000 + frontend on :5173
+	$(DC) up -d frontend
 	bash scripts/deploy-pipeline-local.sh
 	sam local start-api \
 	  --docker-network image-service-net \
@@ -162,11 +163,14 @@ local: localstack-start build ## Run local dev stack — LocalStack + SAM API on
 dev: build ## Build and deploy to dev environment
 	sam deploy --config-env dev
 	poetry run python migrations/runner.py --env dev
+	$(MAKE) frontend-build
+	$(MAKE) _deploy-frontend STACK_ENV=dev
 
 staging: build ## Build and deploy to staging environment
 	sam deploy --config-env staging --no-fail-on-empty-changeset
 	bash scripts/wire-notifications.sh staging
 	poetry run python migrations/runner.py --env staging
+	$(MAKE) frontend-build
 	$(MAKE) _deploy-frontend STACK_ENV=staging
 
 prod: build ## Build and deploy to production (3s abort window)
@@ -175,6 +179,7 @@ prod: build ## Build and deploy to production (3s abort window)
 	sam deploy --config-env prod --no-fail-on-empty-changeset
 	bash scripts/wire-notifications.sh prod
 	poetry run python migrations/runner.py --env prod
+	$(MAKE) frontend-build
 	$(MAKE) _deploy-frontend STACK_ENV=prod
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
