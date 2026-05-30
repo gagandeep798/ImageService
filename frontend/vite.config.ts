@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: {
-        '/v1': { target: env.VITE_SAM_LOCAL_API_URL, changeOrigin: true },
+        '^/(auth|images|users|health)': { target: env.VITE_SAM_LOCAL_API_URL, changeOrigin: true },
       },
     },
     build: { outDir: 'dist', sourcemap: false },

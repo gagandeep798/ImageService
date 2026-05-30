@@ -8,7 +8,7 @@ export interface AuthUser {
 }
 
 async function post(path: string, body: object) {
-  const res = await fetch(`/v1${path}`, {
+  const res = await fetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
