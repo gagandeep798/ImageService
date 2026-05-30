@@ -682,7 +682,7 @@ Resources:
         - Statement:
             - Effect: Allow
               Action: sts:AssumeRole
-              Resource: !GetAtt DynamoDBDeleteRole.Arn
+              Resource: !If [IsNotLocal, !GetAtt DynamoDBDeleteRole.Arn, "*"]
 
   DownloadFunction:
     Type: AWS::Serverless::Function
@@ -750,7 +750,7 @@ Resources:
         - Statement:
             - Effect: Allow
               Action: sts:AssumeRole
-              Resource: !GetAtt DynamoDBDeleteRole.Arn
+              Resource: !If [IsNotLocal, !GetAtt DynamoDBDeleteRole.Arn, "*"]
 
   SlackNotifierFunction:
     Type: AWS::Serverless::Function
