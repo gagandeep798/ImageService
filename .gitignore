@@ -1,6 +1,5 @@
 # Project-specific: never commit these
 .env
-.env.local
 .env.secrets
 docker/.env
 docker/.env.local

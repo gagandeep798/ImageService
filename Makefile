@@ -6,12 +6,10 @@
         frontend-install frontend-dev frontend-build \
         deploy-frontend-staging deploy-frontend-prod _frontend-sync
 
-# Application env (table names, bucket prefixes, upload limits, etc.)
+# Application env — copy .env.template to .env and fill in values (not committed)
 include .env
 # Docker env (image versions, port mappings)
 include docker/.env
-# Local overrides (credentials, AWS_ENDPOINT_URL) — not committed
--include .env.local
 export
 
 # AWS CLI with optional endpoint — set AWS_ENDPOINT_URL for LocalStack, unset for real AWS
