@@ -1,7 +1,7 @@
 .PHONY: install docker-build localstack-up localstack-down \
         migrate-local migrate-staging migrate-dry-run \
         test-unit test-integration test lint format typecheck \
-        build start-api logs-list logs-tail seed \
+        build start-api logs-list logs-tail \
         deploy-dev deploy-staging deploy-prod \
         frontend-install frontend-dev frontend-build \
         deploy-frontend-staging deploy-frontend-prod _frontend-sync
@@ -40,9 +40,6 @@ logs-tail:
 	$(AWS_CMD) logs filter-log-events \
 	  --log-group-name /aws/lambda/image-service-$(FUNCTION)-$(APP_ENV) \
 	  --start-time $$(( ($$(date +%s) - 300) * 1000 ))
-
-seed: localstack-up
-	poetry run python scripts/seed_data.py
 
 # ── Migrations ────────────────────────────────────────────────────────────────
 

@@ -32,11 +32,7 @@ make fetch-secrets
 make localstack-up
 # Starts: LocalStack, OpenSearch, OpenSearch Dashboards, Nginx
 
-# 5. Seed test data
-make seed
-# Creates 3 test users and 2 placeholder images per user
-
-# 6. Start the SAM local API
+# 5. Start the SAM local API
 make start-api
 # API available at http://localhost:3000
 ```
@@ -135,16 +131,6 @@ make migrate-local
 ```
 
 See [Database Migrations](migrations.md) for how to write a new migration.
-
----
-
-## Seeding Test Data
-
-```bash
-make seed
-```
-
-Creates 3 users and 2 ACTIVE placeholder images per user in the local DynamoDB tables. Image records use `seeded_placeholder` for the email hash (not a real Argon2id hash) so they are easy to distinguish from real data.
 
 ---
 

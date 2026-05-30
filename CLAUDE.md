@@ -13,7 +13,6 @@ cp .env.local.template .env.local   # fill in local credentials
 # Local stack
 make localstack-up    # build image + start LocalStack (blocks until healthy + init scripts run)
 make localstack-down  # stop and remove volumes
-make seed             # seed DynamoDB + S3 with test data
 
 # SAM local API (after localstack-up)
 make start-api        # SAM on http://localhost:3000 — pass ?_dev_user_id=<uid> instead of JWT
