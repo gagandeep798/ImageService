@@ -15,9 +15,9 @@ export function useImages() {
     try {
       const token = reset ? undefined : nextToken
       const res = await api.listImages(20, token)
-      setImages(prev => reset ? res.images : [...prev, ...res.images])
-      setNextToken(res.next_token)
-      setHasMore(!!res.next_token)
+      setImages(prev => reset ? res.items : [...prev, ...res.items])
+      setNextToken(res.next_cursor)
+      setHasMore(!!res.next_cursor)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load images')
     } finally {

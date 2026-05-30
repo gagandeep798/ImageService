@@ -27,9 +27,9 @@ export interface ImageRecord {
 }
 
 export interface ListImagesResponse {
-  images: ImageRecord[]
-  next_token?: string
-  total: number
+  items: ImageRecord[]
+  next_cursor?: string
+  count: number
 }
 
 export interface InitiateUploadResponse {
