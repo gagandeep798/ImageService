@@ -26,12 +26,9 @@ AWS_CMD = aws$(if $(AWS_ENDPOINT_URL), --endpoint-url=$(AWS_ENDPOINT_URL),)
         migrate-local migrate-staging migrate-dry-run \
         test-unit test-integration test \
         lint format typecheck \
-        build start-api deploy-pipeline-local deploy-local local-up \
-        deploy-dev deploy-staging deploy-prod \
+        build local dev staging prod \
         frontend-install frontend-dev frontend-build \
-        deploy-frontend-staging deploy-frontend-prod \
-        _frontend-sync _deploy-frontend \
-        dev-activate
+        _frontend-sync _deploy-frontend
 
 # ── Help ──────────────────────────────────────────────────────────────────────
 
@@ -46,7 +43,7 @@ install: ## Install Python dependencies (Poetry)
 
 setup: localstack-up cognito-init ## First-time local setup: start stack + init Cognito
 
-# ── Docker ────────────────────────────────────────────────────────────────────
+# ── Docker / LocalStack ───────────────────────────────────────────────────────
 
 docker-build: ## Build Docker images
 	$(DC) build
@@ -60,7 +57,7 @@ localstack-start: ## Start LocalStack without rebuilding
 localstack-down: ## Stop LocalStack and remove volumes
 	$(DC) down -v
 
-stop: ## Kill SAM local API (preserves LocalStack data); use localstack-down to also wipe volumes
+stop: ## Kill SAM local API (preserves LocalStack data)
 	-lsof -ti :3000 | xargs kill 2>/dev/null || true
 
 stop-all: ## Kill SAM local API AND tear down LocalStack with volumes (full reset)
@@ -141,36 +138,16 @@ format: ## Format with Ruff
 typecheck: ## Type-check with mypy (strict)
 	poetry run mypy src
 
-# ── SAM ───────────────────────────────────────────────────────────────────────
+# ── Build ─────────────────────────────────────────────────────────────────────
 
 build: ## Build SAM project using Docker
 	docker run --rm -v "$(PWD)/.aws-sam:/workspace" alpine sh -c "rm -rf /workspace/build" 2>/dev/null || true
 	sam build --use-container
 
-deploy-pipeline-local: ## Deploy finalize/scan/thumbnail Lambdas to LocalStack and wire S3 notification
+# ── Environments ──────────────────────────────────────────────────────────────
+
+local: localstack-start build ## Run local dev stack — LocalStack + SAM API on http://localhost:3000
 	bash scripts/deploy-pipeline-local.sh
-
-deploy-local: localstack-start build ## Deploy full CloudFormation stack to LocalStack via samlocal
-	@echo "--- pre-deploy: removing any failed stack (tables are preserved) ---"
-	@AWS_ENDPOINT_URL=http://localhost:4566 aws cloudformation delete-stack \
-	  --stack-name image-service-local --region us-east-1 2>/dev/null || true
-	@AWS_ENDPOINT_URL=http://localhost:4566 aws cloudformation wait stack-delete-complete \
-	  --stack-name image-service-local --region us-east-1 2>/dev/null || true
-	@echo "--- deploying stack ---"
-	AWS_ENDPOINT_URL=http://localhost:4566 poetry run samlocal deploy \
-	  --config-env local \
-	  --parameter-overrides \
-	    Env=local \
-	    LogLevel=DEBUG \
-	    AwsEndpointUrl=http://image-service-localstack:4566 \
-	    S3PresignedEndpointUrl=http://localhost:4566 \
-	    PiiPepper=$(PII_PEPPER) \
-	    CognitoUserPoolId=$(COGNITO_USER_POOL_ID) \
-	    CognitoClientId=$(COGNITO_CLIENT_ID) \
-	    CognitoEndpointUrl=http://image-service-cognito-local:9229
-	AWS_ENDPOINT_URL=http://localhost:4566 bash scripts/wire-notifications.sh local
-
-local-up: deploy-local ## Deploy to LocalStack + start SAM API (full local stack in one command)
 	sam local start-api \
 	  --docker-network image-service-net \
 	  --port 3000 \
@@ -182,37 +159,23 @@ local-up: deploy-local ## Deploy to LocalStack + start SAM API (full local stack
 	    CognitoClientId=$(COGNITO_CLIENT_ID) \
 	    CognitoEndpointUrl=http://image-service-cognito-local:9229
 
-start-api: localstack-start build deploy-pipeline-local ## Start SAM local API on http://localhost:3000 (fast dev loop)
-	sam local start-api \
-	  --docker-network image-service-net \
-	  --port 3000 \
-	  --parameter-overrides \
-	    AwsEndpointUrl=http://image-service-localstack:4566 \
-	    S3PresignedEndpointUrl=http://localhost:4566 \
-	    PiiPepper=$(PII_PEPPER) \
-	    CognitoUserPoolId=$(COGNITO_USER_POOL_ID) \
-	    CognitoClientId=$(COGNITO_CLIENT_ID) \
-	    CognitoEndpointUrl=http://image-service-cognito-local:9229
-
-# ── Deploys ───────────────────────────────────────────────────────────────────
-
-deploy-dev: build ## Build and deploy to dev; run migrations
+dev: build ## Build and deploy to dev environment
 	sam deploy --config-env dev
 	poetry run python migrations/runner.py --env dev
 
-deploy-staging: build ## Build and deploy to staging; run migrations; deploy frontend
+staging: build ## Build and deploy to staging environment
 	sam deploy --config-env staging --no-fail-on-empty-changeset
 	bash scripts/wire-notifications.sh staging
 	poetry run python migrations/runner.py --env staging
-	$(MAKE) deploy-frontend-staging
+	$(MAKE) _deploy-frontend STACK_ENV=staging
 
-deploy-prod: build ## Build and deploy to prod (3s abort window); run migrations; deploy frontend
+prod: build ## Build and deploy to production (3s abort window)
 	@echo "Deploying to PRODUCTION. Ctrl-C to abort..."
 	@sleep 3
 	sam deploy --config-env prod --no-fail-on-empty-changeset
 	bash scripts/wire-notifications.sh prod
 	poetry run python migrations/runner.py --env prod
-	$(MAKE) deploy-frontend-prod
+	$(MAKE) _deploy-frontend STACK_ENV=prod
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
 
@@ -250,11 +213,3 @@ _deploy-frontend:
 	  --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" \
 	  --output text); \
 	$(MAKE) _frontend-sync FRONTEND_BUCKET=$$bucket CLOUDFRONT_DISTRIBUTION_ID=$$cf_id
-
-deploy-frontend-staging: frontend-build ## Build frontend and deploy to staging S3
-	$(MAKE) _deploy-frontend STACK_ENV=staging
-
-deploy-frontend-prod: frontend-build ## Build frontend and deploy to prod S3 (3s abort window)
-	@echo "Deploying frontend to PRODUCTION. Ctrl-C to abort..."
-	@sleep 3
-	$(MAKE) _deploy-frontend STACK_ENV=prod
