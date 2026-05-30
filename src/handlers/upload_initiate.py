@@ -40,7 +40,10 @@ def handler(event: dict, context: LambdaContext) -> dict:
     try:
         caller_id = get_caller_user_id(event)
         body = json.loads(event.get("body") or "{}")
-        req = UploadInitiateRequest(**body)
+        try:
+            req = UploadInitiateRequest(**body)
+        except Exception as exc:
+            raise ValidationError(str(exc)) from exc
 
         if req.user_id != caller_id:
             from src.common.exceptions import ForbiddenError

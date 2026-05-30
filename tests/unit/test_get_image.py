@@ -14,7 +14,7 @@ pytestmark = pytest.mark.unit
 def _event(image_id: str) -> dict:
     return {
         "pathParameters": {"image_id": image_id},
-        "requestContext": {"requestId": "req-get", "authorizer": {"jwt": {"claims": {"sub": "usr_abc"}}}},
+        "requestContext": {"requestId": "req-get", "authorizer": {"user_id": "usr_abc"}},
         "queryStringParameters": {},
     }
 

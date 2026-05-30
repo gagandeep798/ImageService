@@ -39,6 +39,9 @@ TEST_SETTINGS = Settings(
     cloudfront_private_key_pem="LOCAL_DEV_NO_CLOUDFRONT",
     cloudfront_key_pair_id="LOCAL_DEV",
     slack_webhook_url="",
+    jwt_secret="test-jwt-secret",
+    jwt_access_token_ttl=3600,
+    jwt_refresh_token_ttl=2592000,
     env="test",
     service_version="0.1.0",
 )

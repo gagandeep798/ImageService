@@ -15,6 +15,10 @@ Parameters:
   ServiceVersion:
     Type: String
     Default: "0.1.0"
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Default: ""
 
 Globals:
   Function:
@@ -47,6 +51,9 @@ Globals:
         UPLOAD_URL_TTL_SECONDS: "900"
         DOWNLOAD_URL_TTL_SECONDS: "3600"
         DYNAMO_DELETE_ROLE_ARN: !GetAtt DynamoDBDeleteRole.Arn
+        JWT_SECRET: !Ref JwtSecret
+        JWT_ACCESS_TOKEN_TTL: "3600"
+        JWT_REFRESH_TOKEN_TTL: "2592000"
 
 # ── Conditions ────────────────────────────────────────────────────────────────
 Conditions:
@@ -839,10 +846,10 @@ Resources:
       StageName: v1
       TracingEnabled: true
       Auth:
-        DefaultAuthorizer: CognitoAuthorizer
+        DefaultAuthorizer: TokenAuthorizer
         Authorizers:
-          CognitoAuthorizer:
-            UserPoolArn: !GetAtt CognitoUserPool.Arn
+          TokenAuthorizer:
+            FunctionArn: !GetAtt TokenAuthorizerFunction.Arn
             Identity:
               Header: Authorization
       MethodSettings:
@@ -857,43 +864,74 @@ Resources:
         DestinationArn: !GetAtt ApiGatewayLogGroup.Arn
         Format: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength","integrationLatency":"$context.integrationLatency"}'
 
-  # ── Cognito ───────────────────────────────────────────────────────────────────
+  # ── Auth Lambda Functions ─────────────────────────────────────────────────────
 
-  CognitoUserPool:
-    Type: AWS::Cognito::UserPool
+  TokenAuthorizerFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      UserPoolName: !Sub "image-service-${Env}"
-      AutoVerifiedAttributes: [email]
-      UsernameAttributes: [email]
+      FunctionName: !Sub "image-service-token-authorizer-${Env}"
+      CodeUri: src/
+      Handler: handlers.token_authorizer.handler
+      Timeout: 5
       Policies:
-        PasswordPolicy:
-          MinimumLength: 12
-          RequireUppercase: true
-          RequireLowercase: true
-          RequireNumbers: true
-          RequireSymbols: true
+        - DynamoDBReadPolicy:
+            TableName: !Ref UsersTable
 
-  CognitoUserPoolClient:
-    Type: AWS::Cognito::UserPoolClient
-    DependsOn: CloudFrontDistribution
+  AuthSignupFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      ClientName: image-service-app
-      UserPoolId: !Ref CognitoUserPool
-      GenerateSecret: false
-      ExplicitAuthFlows:
-        - ALLOW_USER_SRP_AUTH
-        - ALLOW_REFRESH_TOKEN_AUTH
-      TokenValidityUnits:
-        AccessToken: hours
-        RefreshToken: days
-      AccessTokenValidity: 1
-      RefreshTokenValidity: 30
-      CallbackURLs:
-        - http://localhost:5173/callback
-        - !Sub "https://${CloudFrontDistribution.DomainName}/callback"
-      LogoutURLs:
-        - http://localhost:5173/
-        - !Sub "https://${CloudFrontDistribution.DomainName}/"
+      FunctionName: !Sub "image-service-auth-signup-${Env}"
+      CodeUri: src/
+      Handler: handlers.auth_signup.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /auth/signup
+            Method: POST
+            Auth:
+              Authorizer: NONE
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref UsersTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref UsersTable
+
+  AuthLoginFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-auth-login-${Env}"
+      CodeUri: src/
+      Handler: handlers.auth_login.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /auth/login
+            Method: POST
+            Auth:
+              Authorizer: NONE
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref UsersTable
+
+  AuthRefreshFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-auth-refresh-${Env}"
+      CodeUri: src/
+      Handler: handlers.auth_refresh.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /auth/refresh
+            Method: POST
+            Auth:
+              Authorizer: NONE
 
   # ── CloudWatch Log Groups ─────────────────────────────────────────────────────
 
@@ -1031,12 +1069,6 @@ Outputs:
 
   OriginalsBucketName:
     Value: !Ref OriginalsBucket
-
-  CognitoUserPoolId:
-    Value: !Ref CognitoUserPool
-
-  CognitoAppClientId:
-    Value: !Ref CognitoUserPoolClient
 
   FrontendBucketName:
     Value: !Ref FrontendBucket

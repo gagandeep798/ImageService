@@ -10,29 +10,12 @@ networks:
 volumes:
   localstack_data:
   frontend_node_modules:
-  cognito_data:
 
 x-docker-env: &docker-env
   - path: .env
     required: true
 
 services:
-
-  cognito-local:
-    image: jagregory/cognito-local:latest
-    container_name: image-service-cognito
-    ports:
-      - "${COGNITO_PORT:-9229}:9229"
-    volumes:
-      - cognito_data:/app/.cognito
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:9229',r=>process.exit(0)).on('error',()=>process.exit(1))"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 5s
-    networks:
-      - image-service-net
 
   localstack:
     build:
@@ -53,7 +36,6 @@ services:
       LOCALSTACK_ACCOUNT_ID: ${LOCALSTACK_ACCOUNT_ID:-000000000000}
       GATEWAY_LISTEN: "0.0.0.0:${LOCALSTACK_PORT:-4566}"
       AWS_ENDPOINT_URL: "http://localhost:${LOCALSTACK_PORT:-4566}"
-      COGNITO_ENDPOINT_URL: http://cognito-local:${COGNITO_PORT:-9229}
       APP_ENV: local
       INIT_DIR: /opt/localstack-init
     volumes:
@@ -67,9 +49,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
-    depends_on:
-      cognito-local:
-        condition: service_healthy
     networks:
       - image-service-net
     restart: unless-stopped

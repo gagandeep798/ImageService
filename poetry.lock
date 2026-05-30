@@ -440,7 +440,6 @@ mypy-boto3-dynamodb = {version = ">=1.43.0,<1.44.0", optional = true, markers = 
 mypy-boto3-kinesis = {version = ">=1.43.0,<1.44.0", optional = true, markers = "extra == \"kinesis\""}
 mypy-boto3-lambda = {version = ">=1.43.0,<1.44.0", optional = true, markers = "extra == \"lambda\""}
 mypy-boto3-s3 = {version = ">=1.43.0,<1.44.0", optional = true, markers = "extra == \"s3\""}
-mypy-boto3-secretsmanager = {version = ">=1.43.0,<1.44.0", optional = true, markers = "extra == \"secretsmanager\""}
 mypy-boto3-sqs = {version = ">=1.43.0,<1.44.0", optional = true, markers = "extra == \"sqs\""}
 types-s3transfer = "*"
 
@@ -1566,24 +1565,6 @@ files = [
 ]
 
 [[package]]
-name = "joserfc"
-version = "1.5.0"
-description = "The ultimate Python library for JOSE RFCs, including JWS, JWE, JWK, JWA, JWT"
-optional = false
-python-versions = ">=3.9"
-groups = ["dev"]
-files = [
-    {file = "joserfc-1.5.0-py3-none-any.whl", hash = "sha256:eaaded4f4c6717a761baa41b4067307d0c246b9d5e38acd44e80a332f5ddaf24"},
-    {file = "joserfc-1.5.0.tar.gz", hash = "sha256:4e88d757cf08ec1d370561a15dd6dda8452ad4e335066a9aeb1b426bffe91c56"},
-]
-
-[package.dependencies]
-cryptography = "*"
-
-[package.extras]
-drafts = ["pycryptodome"]
-
-[[package]]
 name = "jsonpath-ng"
 version = "1.8.0"
 description = "A final implementation of JSONPath for Python that aims to be standard compliant, including arithmetic and binary comparison operators and providing clear AST for metaprogramming."
@@ -1812,7 +1793,6 @@ boto3 = ">=1.9.201"
 botocore = ">=1.20.88,<1.35.45 || >1.35.45,<1.35.46 || >1.35.46"
 cryptography = ">=35.0.0"
 docker = {version = ">=3.0.0", optional = true, markers = "extra == \"dynamodb\""}
-joserfc = {version = ">=0.9.0", optional = true, markers = "extra == \"cognitoidp\""}
 py-partiql-parser = {version = "0.6.3", optional = true, markers = "extra == \"dynamodb\" or extra == \"s3\""}
 PyYAML = {version = ">=5.1", optional = true, markers = "extra == \"s3\""}
 requests = ">=2.5"
@@ -2140,18 +2120,6 @@ groups = ["dev"]
 files = [
     {file = "mypy_boto3_s3-1.43.14-py3-none-any.whl", hash = "sha256:ce77096d6c5f90020c45e34c83d2268ca2bb17726149ce5033751870f7fb4e97"},
     {file = "mypy_boto3_s3-1.43.14.tar.gz", hash = "sha256:73d54c1d0999c73c403dc9a9a3da4a9722715aba116595af08c0d4675f8bc670"},
-]
-
-[[package]]
-name = "mypy-boto3-secretsmanager"
-version = "1.43.0"
-description = "Type annotations for boto3 SecretsManager 1.43.0 service generated with mypy-boto3-builder 8.12.0"
-optional = false
-python-versions = ">=3.9"
-groups = ["dev"]
-files = [
-    {file = "mypy_boto3_secretsmanager-1.43.0-py3-none-any.whl", hash = "sha256:38415cdecb73dd20e485707a7cf456f6dde54ff4b155e7fb255eb001eb47d5bc"},
-    {file = "mypy_boto3_secretsmanager-1.43.0.tar.gz", hash = "sha256:265ee2fddf9d3e42ae39685625fb7861a539110d8e324372847c0e1cbd666b20"},
 ]
 
 [[package]]
@@ -2673,6 +2641,21 @@ files = [
 
 [package.extras]
 windows-terminal = ["colorama (>=0.4.6)"]
+
+[[package]]
+name = "pyjwt"
+version = "2.13.0"
+description = "JSON Web Token implementation in Python"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "pyjwt-2.13.0-py3-none-any.whl", hash = "sha256:66adcc2aff09b3f1bbd95fc1e1577df8ac8723c978552fd43304c8a290ac5728"},
+    {file = "pyjwt-2.13.0.tar.gz", hash = "sha256:41571c89ca91598c79e8ef18a2d07367d4810fbbd6f637794879baf1b7703423"},
+]
+
+[package.extras]
+crypto = ["cryptography (>=3.4.0)"]
 
 [[package]]
 name = "pytest"
@@ -3322,4 +3305,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "b1ea0c703073c88a2dc3800ce03365e832520b71d9d70723738f32a675a52dff"
+content-hash = "17a305950276f1a075cb81cdaf1b1f03b2cc0122172afd01d1f504aad060d48d"

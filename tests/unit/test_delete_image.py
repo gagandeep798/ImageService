@@ -16,7 +16,7 @@ def _event(image_id: str, user_id: str = "usr_abc") -> dict:
         "pathParameters": {"image_id": image_id},
         "requestContext": {
             "requestId": "req-del",
-            "authorizer": {"jwt": {"claims": {"sub": user_id}}},
+            "authorizer": {"user_id": user_id},
         },
         "queryStringParameters": {},
     }

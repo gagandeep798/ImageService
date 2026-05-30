@@ -87,4 +87,4 @@ class TestUserRecord:
         fields = set(UserRecord.model_fields.keys())
         assert "email" not in fields
         assert "email_hash" in fields
-        assert "email_salt" in fields
+        assert "password_hash" in fields

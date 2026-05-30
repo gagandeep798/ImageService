@@ -51,6 +51,11 @@ class Settings:
     # Alerts
     slack_webhook_url: str
 
+    # JWT
+    jwt_secret: str
+    jwt_access_token_ttl: int
+    jwt_refresh_token_ttl: int
+
     # Env
     env: str
     service_version: str
@@ -91,9 +96,11 @@ def get_settings() -> Settings:
         cloudfront_private_key_pem=cf_private_key,
         cloudfront_key_pair_id=os.environ.get("CLOUDFRONT_KEY_PAIR_ID", ""),
         slack_webhook_url=os.environ.get("SLACK_WEBHOOK_URL", ""),
+        jwt_secret=os.environ["JWT_SECRET"],
+        jwt_access_token_ttl=int(os.environ.get("JWT_ACCESS_TOKEN_TTL", "3600")),
+        jwt_refresh_token_ttl=int(os.environ.get("JWT_REFRESH_TOKEN_TTL", "2592000")),
         env=env,
         service_version=os.environ.get("SERVICE_VERSION", "0.1.0"),
-
     )
 
     return settings

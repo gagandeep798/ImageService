@@ -12,6 +12,7 @@ pydantic = "^2.7"
 aws-lambda-powertools = {extras = ["all"], version = "^3.0"}
 python-multipart = "^0.0.9"
 python-ulid = "^2.2"
+pyjwt = "^2.8"
 Pillow = "^10.3"
 argon2-cffi = "^23.1"
 aioboto3 = "^13.0"
@@ -21,7 +22,7 @@ cryptography = "^42.0"
 pytest = "^8.2"
 pytest-cov = "^5.0"
 pytest-asyncio = "^0.23"
-moto = {extras = ["dynamodb", "s3", "sqs", "kinesis", "cognitoidp"], version = "^5.0"}
+moto = {extras = ["dynamodb", "s3", "sqs", "kinesis"], version = "^5.0"}
 mypy = "^1.10"
 ruff = "^0.4"
 boto3-stubs = {extras = ["dynamodb", "s3", "sqs", "kinesis", "cognito-idp", "lambda", "cloudwatch"], version = "^1.34"}

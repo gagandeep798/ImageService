@@ -114,16 +114,12 @@ class ListImagesResponse(BaseModel):
 
 
 class UserRecord(BaseModel):
-    """DynamoDB user profile record.
-
-    Email is stored only as a hashed value (``email_hash`` + ``email_salt``) —
-    the plaintext address is never persisted.
-    """
+    """DynamoDB user profile record."""
 
     user_id: str
     display_name: str
     email_hash: str
-    email_salt: str
+    password_hash: str
     status: str
     storage_used_bytes: int = 0
     storage_quota_bytes: int = 10 * 1024 * 1024 * 1024
@@ -132,3 +128,26 @@ class UserRecord(BaseModel):
     updated_at: str
     deleted_at: Optional[str] = None
     gdpr_erased_at: Optional[str] = None
+
+
+class SignupRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str = Field(min_length=1, max_length=100)
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "Bearer"
+    expires_in: int
+    user_id: str

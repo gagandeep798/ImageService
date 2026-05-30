@@ -15,7 +15,7 @@ def _make_event(body: dict, user_id: str = "usr_abc") -> dict:
         "body": json.dumps(body),
         "requestContext": {
             "requestId": "test-req-id",
-            "authorizer": {"jwt": {"claims": {"sub": user_id}}},
+            "authorizer": {"user_id": user_id},
         },
         "pathParameters": {},
         "queryStringParameters": {},
