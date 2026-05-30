@@ -885,6 +885,8 @@ Resources:
       Policies:
         - DynamoDBReadPolicy:
             TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
+        - DynamoDBWritePolicy:
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
 
   AuthRefreshFunction:
     Type: AWS::Serverless::Function

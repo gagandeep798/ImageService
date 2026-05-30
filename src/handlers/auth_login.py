@@ -11,9 +11,10 @@ from botocore.exceptions import ClientError
 
 from src.common import response as resp
 from src.common.config import get_settings
-from src.common.exceptions import ImageServiceError, ValidationError
+from src.common.exceptions import ImageServiceError, NotFoundError, ValidationError
 from src.common.middleware import get_request_id
 from src.common.models import LoginRequest, TokenResponse
+from src.repositories import user_repository as user_repo
 
 logger = Logger(service="image-service")
 tracer = Tracer(service="image-service")
@@ -65,6 +66,17 @@ def handler(event: dict, context: LambdaContext) -> dict:
         id_token = auth_result["IdToken"]
         claims = _decode_id_token_claims(id_token)
         user_id = claims.get("custom:user_id", "")
+
+        # Auto-create profile if missing (handles data wipes in local dev
+        # or partially-failed signups)
+        if user_id:
+            try:
+                user_repo.get_user(settings, user_id)
+            except NotFoundError:
+                try:
+                    user_repo.create_user(settings, user_id, req.email.split("@")[0])
+                except Exception:
+                    pass  # already created by a concurrent request
 
         token_resp = TokenResponse(
             access_token=id_token,
