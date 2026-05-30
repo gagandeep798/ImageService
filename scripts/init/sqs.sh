@@ -17,7 +17,7 @@ create_queue() {
 
 for q in image-service-finalize image-service-finalize-dlq \
           image-service-scan image-service-scan-dlq \
-          image-service-thumbnails; do
+          image-service-thumbnails image-service-thumbnails-dlq; do
     create_queue "$q"
 done
 

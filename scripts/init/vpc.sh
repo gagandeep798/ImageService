@@ -88,18 +88,6 @@ if [ -n "$API_GW_SG" ]; then
     log "sg: image-service-api-gw-sg ($API_GW_SG)"
 fi
 
-# Secrets Manager VPC endpoint SG — ingress 443 from Lambda SG
-SM_ENDPOINT_SG=$(create_sg "image-service-secretsmanager-endpoint-sg" "Secrets Manager VPC endpoint")
-if [ -n "$SM_ENDPOINT_SG" ] && [ -n "$LAMBDA_SG" ]; then
-    aws_cmd ec2 authorize-security-group-ingress \
-        --group-id "$SM_ENDPOINT_SG" \
-        --protocol tcp \
-        --port 443 \
-        --source-group "$LAMBDA_SG" \
-        --region "$REGION" 2>/dev/null || true
-    log "sg: image-service-secretsmanager-endpoint-sg ($SM_ENDPOINT_SG)"
-fi
-
 # SQS VPC endpoint SG — ingress 443 from Lambda SG
 SQS_ENDPOINT_SG=$(create_sg "image-service-sqs-endpoint-sg" "SQS VPC endpoint")
 if [ -n "$SQS_ENDPOINT_SG" ] && [ -n "$LAMBDA_SG" ]; then

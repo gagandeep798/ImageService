@@ -1,4 +1,4 @@
-.PHONY: install docker-build localstack-up localstack-down \
+.PHONY: install docker-build localstack-up localstack-start localstack-down \
         migrate-local migrate-staging migrate-dry-run \
         test-unit test-integration test lint format typecheck \
         build start-api logs-list logs-tail \
@@ -26,6 +26,9 @@ docker-build:
 	docker compose -f docker/docker-compose.yml build
 
 localstack-up: docker-build
+	docker compose -f docker/docker-compose.yml up -d --wait
+
+localstack-start:
 	docker compose -f docker/docker-compose.yml up -d --wait
 
 localstack-down:
@@ -78,9 +81,12 @@ build:
 
 start-api: localstack-up build
 	sam local start-api \
-	  --env-vars .env \
 	  --docker-network image-service-net \
-	  --port 3000
+	  --port 3000 \
+	  --parameter-overrides \
+	    AwsEndpointUrl=http://image-service-localstack:4566 \
+	    JwtSecret=$(shell grep '^JWT_SECRET=' .env | cut -d= -f2-) \
+	    PiiPepper=$(shell grep '^PII_PEPPER=' .env | cut -d= -f2-)
 
 # ── Deploys ───────────────────────────────────────────────────────────────────
 

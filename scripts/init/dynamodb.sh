@@ -62,14 +62,4 @@ create_table "image-service-migrations" \
         AttributeName=SK,KeyType=RANGE \
     --billing-mode PAY_PER_REQUEST
 
-# secret hashes table
-create_table "image-service-secret-hashes" \
-    --attribute-definitions \
-        AttributeName=PK,AttributeType=S \
-        AttributeName=SK,AttributeType=S \
-    --key-schema \
-        AttributeName=PK,KeyType=HASH \
-        AttributeName=SK,KeyType=RANGE \
-    --billing-mode PAY_PER_REQUEST
-
 log "DynamoDB tables ready"
