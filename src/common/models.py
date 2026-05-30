@@ -65,6 +65,7 @@ class ImageRecord(BaseModel):
 
     image_id: str
     user_id: str
+    filename: str | None = None
     title: str | None = None
     description: str | None = None
     tags: list[str] = Field(default_factory=list)
@@ -86,6 +87,7 @@ class ImageResponse(BaseModel):
 
     image_id: str
     user_id: str
+    filename: str | None = None
     title: str | None = None
     description: str | None = None
     tags: list[str] = Field(default_factory=list)

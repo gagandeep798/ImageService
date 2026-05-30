@@ -64,6 +64,7 @@ def create_pending(
     title: str | None,
     description: str | None,
     tags: list[str],
+    filename: str | None = None,
 ) -> None:
     """Write a new image record in PENDING status after the multipart upload is initiated.
 
@@ -91,6 +92,8 @@ def create_pending(
         "created_at": now,
         "updated_at": now,
     }
+    if filename:
+        item["filename"] = filename
     if title:
         item["title"] = title
     if description:

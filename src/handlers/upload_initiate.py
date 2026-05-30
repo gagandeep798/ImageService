@@ -65,6 +65,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
             title=req.title,
             description=req.description,
             tags=req.tags,
+            filename=req.filename,
         )
 
         metrics.add_metric(name="upload.initiated", unit=MetricUnit.Count, value=1)
