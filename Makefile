@@ -20,7 +20,7 @@ AWS_CMD = aws$(if $(AWS_ENDPOINT_URL), --endpoint-url=$(AWS_ENDPOINT_URL),)
 .DEFAULT_GOAL := help
 
 .PHONY: help install \
-        docker-build localstack-up localstack-start localstack-down stop stop-all \
+        docker-build localstack-up localstack-start localstack-down stop stop-all reset \
         cognito-up cognito-down cognito-init setup \
         logs-list logs-tail \
         migrate-local migrate-staging migrate-dry-run \
@@ -60,7 +60,11 @@ localstack-down: ## Stop LocalStack and remove volumes
 stop: ## Kill SAM local API (preserves LocalStack data)
 	-lsof -ti :3000 | xargs kill 2>/dev/null || true
 
-stop-all: ## Kill SAM local API AND tear down LocalStack with volumes (full reset)
+stop-all: ## Kill SAM local API and stop all containers (data preserved)
+	-lsof -ti :3000 | xargs kill 2>/dev/null || true
+	$(DC) down
+
+reset: ## Full reset — stop everything and wipe all volumes (data LOST)
 	-lsof -ti :3000 | xargs kill 2>/dev/null || true
 	$(DC) down -v
 
