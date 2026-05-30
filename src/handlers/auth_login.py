@@ -1,23 +1,37 @@
-"""POST /auth/login — authenticate and return tokens."""
+"""POST /auth/login — authenticate with Cognito and return tokens."""
 from __future__ import annotations
 
-import json
+import base64
+import json as _json
 
+import boto3
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.typing import LambdaContext
+from botocore.exceptions import ClientError
 
-from src.common import jwt_utils
 from src.common import response as resp
 from src.common.config import get_settings
-from src.common.exceptions import ImageServiceError, NotFoundError, ValidationError
+from src.common.exceptions import ImageServiceError, ValidationError
 from src.common.middleware import get_request_id
 from src.common.models import LoginRequest, TokenResponse
-from src.repositories import user_repository as user_repo
 
 logger = Logger(service="image-service")
 tracer = Tracer(service="image-service")
 
 _INVALID_MSG = "Invalid email or password"
+
+
+def _cognito(settings):
+    kwargs = dict(region_name=settings.aws_region)
+    if settings.cognito_endpoint_url:
+        kwargs["endpoint_url"] = settings.cognito_endpoint_url
+    return boto3.client("cognito-idp", **kwargs)
+
+
+def _decode_id_token_claims(id_token: str) -> dict:
+    payload_b64 = id_token.split(".")[1]
+    payload_b64 += "=" * (4 - len(payload_b64) % 4)
+    return _json.loads(base64.b64decode(payload_b64))
 
 
 @logger.inject_lambda_context(log_event=False)
@@ -27,28 +41,35 @@ def handler(event: dict, context: LambdaContext) -> dict:
     request_id = get_request_id(event)
 
     try:
-        body = json.loads(event.get("body") or "{}")
+        body = _json.loads(event.get("body") or "{}")
         req = LoginRequest(**body)
     except Exception as exc:
         return resp.error(ValidationError(str(exc)), request_id)
 
     try:
+        cognito = _cognito(settings)
+
         try:
-            user = user_repo.get_user_by_email(settings, req.email)
-        except NotFoundError:
-            return resp.error(ValidationError(_INVALID_MSG), request_id)
+            auth_result = cognito.initiate_auth(
+                AuthFlow="USER_PASSWORD_AUTH",
+                AuthParameters={"USERNAME": req.email, "PASSWORD": req.password},
+                ClientId=settings.cognito_client_id,
+            )["AuthenticationResult"]
+        except ClientError as exc:
+            code = exc.response["Error"]["Code"]
+            if code in ("NotAuthorizedException", "UserNotFoundException"):
+                return resp.error(ValidationError(_INVALID_MSG), request_id)
+            raise
 
-        if not user_repo.verify_password(req.password, user.password_hash):
-            return resp.error(ValidationError(_INVALID_MSG), request_id)
-
-        access_token = jwt_utils.issue_access_token(settings, user.user_id)
-        refresh_token = jwt_utils.issue_refresh_token(settings, user.user_id)
+        id_token = auth_result["IdToken"]
+        claims = _decode_id_token_claims(id_token)
+        user_id = claims.get("custom:user_id", "")
 
         token_resp = TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            expires_in=settings.jwt_access_token_ttl,
-            user_id=user.user_id,
+            access_token=id_token,
+            refresh_token=auth_result["RefreshToken"],
+            expires_in=auth_result["ExpiresIn"],
+            user_id=user_id,
         )
         return resp.ok(token_resp.model_dump(), request_id)
 
