@@ -123,7 +123,7 @@ start-api: localstack-start build
 	    PiiPepper=$(shell grep '^PII_PEPPER=' .env | cut -d= -f2-) \
 	    CognitoUserPoolId=$(shell grep '^COGNITO_USER_POOL_ID=' .env | cut -d= -f2-) \
 	    CognitoClientId=$(shell grep '^COGNITO_CLIENT_ID=' .env | cut -d= -f2-) \
-	    CognitoEndpointUrl=$(shell grep '^COGNITO_ENDPOINT_URL=' .env | cut -d= -f2-)
+	    CognitoEndpointUrl=http://image-service-cognito-local:9229
 
 # ── Deploys ───────────────────────────────────────────────────────────────────
 

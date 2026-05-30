@@ -48,7 +48,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
 
     try:
         cognito = _cognito(settings)
-        user_id = f"usr_{ULID().str.lower()}"
+        user_id = f"usr_{str(ULID()).lower()}"
 
         try:
             cognito.sign_up(
@@ -81,7 +81,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
         token_resp = TokenResponse(
             access_token=auth_result["IdToken"],
             refresh_token=auth_result["RefreshToken"],
-            expires_in=auth_result["ExpiresIn"],
+            expires_in=auth_result.get("ExpiresIn", 3600),
             user_id=user_id,
         )
         return resp.created(token_resp.model_dump(), request_id)

@@ -66,7 +66,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
         return resp.ok({
             "access_token": id_token,
             "token_type": "Bearer",
-            "expires_in": auth_result["ExpiresIn"],
+            "expires_in": auth_result.get("ExpiresIn", 3600),
             "user_id": user_id,
         }, request_id)
 

@@ -68,7 +68,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
         token_resp = TokenResponse(
             access_token=id_token,
             refresh_token=auth_result["RefreshToken"],
-            expires_in=auth_result["ExpiresIn"],
+            expires_in=auth_result.get("ExpiresIn", 3600),
             user_id=user_id,
         )
         return resp.ok(token_resp.model_dump(), request_id)
