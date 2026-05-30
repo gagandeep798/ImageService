@@ -100,17 +100,6 @@ def get_settings() -> Settings:
         secretsmanager_endpoint_url=sm_endpoint,
     )
 
-    if env != "local":
-        _required = {
-            "pii_pepper": settings.pii_pepper,
-            "originals_bucket": settings.originals_bucket,
-            "thumbnails_bucket": settings.thumbnails_bucket,
-            "quarantine_bucket": settings.quarantine_bucket,
-        }
-        missing = [k for k, v in _required.items() if not v]
-        if missing:
-            raise RuntimeError(f"Required env vars not set for env={env!r}: {missing}")
-
     return settings
 
 
