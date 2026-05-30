@@ -20,7 +20,6 @@ TEST_SETTINGS = Settings(
     images_table_name="test-images",
     users_table_name="test-users",
     migrations_table_name="test-migrations",
-    secret_hashes_table_name="test-secret-hashes",
     dynamodb_endpoint_url=None,
     aws_region="us-east-1",
     originals_bucket="test-originals",
@@ -42,7 +41,6 @@ TEST_SETTINGS = Settings(
     slack_webhook_url="",
     env="test",
     service_version="0.1.0",
-    secretsmanager_endpoint_url=None,
 )
 
 

@@ -17,7 +17,6 @@ class Settings:
     images_table_name: str
     users_table_name: str
     migrations_table_name: str
-    secret_hashes_table_name: str
     dynamodb_endpoint_url: Optional[str]
     aws_region: str
 
@@ -55,7 +54,6 @@ class Settings:
     # Env
     env: str
     service_version: str
-    secretsmanager_endpoint_url: Optional[str]
 
 
 @lru_cache(maxsize=1)
@@ -66,7 +64,6 @@ def get_settings() -> Settings:
     _aws_endpoint = os.environ.get("AWS_ENDPOINT_URL") or None
     dynamo_endpoint = os.environ.get("DYNAMODB_ENDPOINT_URL") or _aws_endpoint
     s3_endpoint = os.environ.get("S3_ENDPOINT_URL") or _aws_endpoint
-    sm_endpoint = os.environ.get("SECRETSMANAGER_ENDPOINT_URL") or _aws_endpoint
 
     cf_b64 = os.environ.get("CLOUDFRONT_PRIVATE_KEY_B64", "")
     cf_private_key = base64.b64decode(cf_b64).decode() if cf_b64 else ""
@@ -75,7 +72,6 @@ def get_settings() -> Settings:
         images_table_name=os.environ.get("IMAGES_TABLE_NAME", "image-service-images"),
         users_table_name=os.environ.get("USERS_TABLE_NAME", "image-service-users"),
         migrations_table_name=os.environ.get("MIGRATIONS_TABLE_NAME", "image-service-migrations"),
-        secret_hashes_table_name=os.environ.get("SECRET_HASHES_TABLE_NAME", "image-service-secret-hashes"),
         dynamodb_endpoint_url=dynamo_endpoint,
         aws_region=region,
         originals_bucket=os.environ.get("ORIGINALS_BUCKET", ""),
@@ -97,7 +93,7 @@ def get_settings() -> Settings:
         slack_webhook_url=os.environ.get("SLACK_WEBHOOK_URL", ""),
         env=env,
         service_version=os.environ.get("SERVICE_VERSION", "0.1.0"),
-        secretsmanager_endpoint_url=sm_endpoint,
+
     )
 
     return settings
