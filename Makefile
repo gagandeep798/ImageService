@@ -99,7 +99,7 @@ cognito-init: ## Initialize Cognito user pool/client (prints env vars to add to 
 	echo "Add these to your .env:" && \
 	echo "COGNITO_USER_POOL_ID=$$POOL_ID" && \
 	echo "COGNITO_CLIENT_ID=$$CLIENT_ID" && \
-	echo "COGNITO_ENDPOINT_URL=$(COGNITO_ENDPOINT)"
+	echo "COGNITO_ENDPOINT_URL=http://image-service-cognito-local:9229"
 
 logs-list: ## List all CloudWatch log groups
 	$(AWS_CMD) logs describe-log-groups

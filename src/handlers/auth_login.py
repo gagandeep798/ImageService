@@ -22,10 +22,11 @@ _INVALID_MSG = "Invalid email or password"
 
 
 def _cognito(settings):
-    kwargs = dict(region_name=settings.aws_region)
-    if settings.cognito_endpoint_url:
-        kwargs["endpoint_url"] = settings.cognito_endpoint_url
-    return boto3.client("cognito-idp", **kwargs)
+    # Always pass an explicit endpoint_url so AWS_ENDPOINT_URL (pointing to
+    # LocalStack) never silently routes cognito calls to the wrong service.
+    endpoint_url = settings.cognito_endpoint_url or \
+        f"https://cognito-idp.{settings.aws_region}.amazonaws.com"
+    return boto3.client("cognito-idp", region_name=settings.aws_region, endpoint_url=endpoint_url)
 
 
 def _decode_id_token_claims(id_token: str) -> dict:
