@@ -33,28 +33,21 @@ deploy_or_update() {
     log "packaging ${name}..."
     (cd "${BUILD_DIR}/${build_name}" && zip -r "${zip}" . -q)
 
-    if aws_lambda get-function --function-name "${name}" &>/dev/null; then
-        aws_lambda update-function-code \
-            --function-name "${name}" \
-            --zip-file "fileb://${zip}" >/dev/null
-        # wait for code update before changing config
-        aws_lambda wait function-updated --function-name "${name}" 2>/dev/null || true
-        aws_lambda update-function-configuration \
-            --function-name "${name}" \
-            --environment "{\"Variables\":${env_json}}" >/dev/null
-        log "updated: ${name}"
-    else
-        aws_lambda create-function \
-            --function-name "${name}" \
-            --runtime python3.12 \
-            --handler "${handler}" \
-            --zip-file "fileb://${zip}" \
-            --role "arn:aws:iam::${ACCOUNT}:role/lambda-role" \
-            --timeout 60 \
-            --memory-size 1024 \
-            --environment "{\"Variables\":${env_json}}" >/dev/null
-        log "created: ${name}"
-    fi
+    # Always delete and recreate to guarantee correct arm64 architecture.
+    # Architecture cannot be changed via update-function-code/configuration.
+    aws_lambda delete-function --function-name "${name}" 2>/dev/null || true
+
+    aws_lambda create-function \
+        --function-name "${name}" \
+        --runtime python3.12 \
+        --architectures arm64 \
+        --handler "${handler}" \
+        --zip-file "fileb://${zip}" \
+        --role "arn:aws:iam::${ACCOUNT}:role/lambda-role" \
+        --timeout 60 \
+        --memory-size 1024 \
+        --environment "{\"Variables\":${env_json}}" >/dev/null
+    log "deployed: ${name}"
 }
 
 # Env vars injected into every pipeline function
