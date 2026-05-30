@@ -16,7 +16,6 @@ pytestmark = pytest.mark.unit
 class TestUploadInitiateRequest:
     def test_valid_request(self):
         req = UploadInitiateRequest(
-            user_id="usr_abc",
             filename="photo.jpg",
             content_type="image/jpeg",
             total_size_bytes=1024,
@@ -27,7 +26,6 @@ class TestUploadInitiateRequest:
     def test_rejects_invalid_content_type(self):
         with pytest.raises(ValidationError):
             UploadInitiateRequest(
-                user_id="usr_abc",
                 filename="script.exe",
                 content_type="application/octet-stream",
                 total_size_bytes=100,
@@ -35,24 +33,12 @@ class TestUploadInitiateRequest:
 
     def test_accepts_all_allowed_content_types(self):
         for ct in ("image/jpeg", "image/png", "image/webp", "image/gif"):
-            req = UploadInitiateRequest(
-                user_id="usr_abc", filename="f", content_type=ct, total_size_bytes=1
-            )
+            req = UploadInitiateRequest(filename="f", content_type=ct, total_size_bytes=1)
             assert req.content_type == ct
-
-    def test_rejects_empty_user_id(self):
-        with pytest.raises(ValidationError):
-            UploadInitiateRequest(
-                user_id="",
-                filename="photo.jpg",
-                content_type="image/jpeg",
-                total_size_bytes=1024,
-            )
 
     def test_rejects_zero_size(self):
         with pytest.raises(ValidationError):
             UploadInitiateRequest(
-                user_id="usr_abc",
                 filename="photo.jpg",
                 content_type="image/jpeg",
                 total_size_bytes=0,

@@ -17,7 +17,6 @@ ImageStatus = str  # PENDING | PENDING_FINALIZE | SCANNING | ACTIVE | QUARANTINE
 class UploadInitiateRequest(BaseModel):
     """Request body for POST /images — step 1 of the chunked upload flow."""
 
-    user_id: str = Field(min_length=1, max_length=128)
     filename: str = Field(min_length=1, max_length=255)
     content_type: str
     total_size_bytes: int = Field(gt=0)

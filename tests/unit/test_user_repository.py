@@ -29,7 +29,6 @@ def test_create_and_get_user(dynamodb_tables, mock_settings: Settings):
 
 
 @mock_aws
-@pytest.mark.skip(reason="moto does not support arithmetic in DynamoDB ConditionExpression")
 def test_quota_check_passes(dynamodb_tables, mock_settings: Settings):
     user_repo.create_user(mock_settings, "usr_quota", "Bob")
     user_repo.check_and_reserve_quota(mock_settings, "usr_quota", 1024)
@@ -39,7 +38,6 @@ def test_quota_check_passes(dynamodb_tables, mock_settings: Settings):
 
 
 @mock_aws
-@pytest.mark.skip(reason="moto does not support arithmetic in DynamoDB ConditionExpression")
 def test_quota_check_fails_when_exceeded(dynamodb_tables, mock_settings: Settings):
     table = dynamodb_tables.Table(mock_settings.users_table_name)
     now = datetime.now(UTC).isoformat()

@@ -64,24 +64,38 @@ def get_user(settings: Settings, user_id: str) -> UserRecord:
 
 
 def check_and_reserve_quota(settings: Settings, user_id: str, size_bytes: int) -> None:
-    """Atomically reserve storage bytes. Raises QuotaExceededError if quota would be exceeded."""
-    resource = get_write_resource(settings)
-    table = _table(resource, settings)
+    """Reserve storage bytes with optimistic locking. Raises QuotaExceededError if quota exceeded."""
+    read_resource = get_read_resource(settings)
+    write_resource = get_write_resource(settings)
+    read_table = _table(read_resource, settings)
+    write_table = _table(write_resource, settings)
+
+    with monitor("users.quota_check"):
+        resp = read_table.get_item(Key={"PK": f"USER#{user_id}", "SK": "PROFILE"})
+    item = resp.get("Item")
+    if not item or item.get("status") != "ACTIVE":
+        raise QuotaExceededError("User not found or inactive")
+
+    current = int(item.get("storage_used_bytes", 0))
+    quota = int(item.get("storage_quota_bytes", 0))
+    if current + size_bytes > quota:
+        raise QuotaExceededError("Storage quota exceeded")
 
     try:
-        with monitor("users.quota_check"):
-            table.update_item(
+        with monitor("users.quota_reserve"):
+            write_table.update_item(
                 Key={"PK": f"USER#{user_id}", "SK": "PROFILE"},
-                UpdateExpression="SET storage_used_bytes = storage_used_bytes + :delta, updated_at = :now",
-                ConditionExpression="storage_used_bytes + :delta <= storage_quota_bytes AND #s = :active",
+                UpdateExpression="SET storage_used_bytes = :new_val, updated_at = :now",
+                ConditionExpression="storage_used_bytes = :current AND #s = :active",
                 ExpressionAttributeNames={"#s": "status"},
                 ExpressionAttributeValues={
-                    ":delta": size_bytes,
+                    ":new_val": current + size_bytes,
+                    ":current": current,
                     ":now": _now(),
                     ":active": "ACTIVE",
                 },
             )
-    except resource.meta.client.exceptions.ConditionalCheckFailedException as exc:
+    except write_resource.meta.client.exceptions.ConditionalCheckFailedException as exc:
         raise QuotaExceededError("Storage quota exceeded") from exc
 
 

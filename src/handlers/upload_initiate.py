@@ -45,10 +45,6 @@ def handler(event: dict, context: LambdaContext) -> dict:
         except Exception as exc:
             raise ValidationError(str(exc)) from exc
 
-        if req.user_id != caller_id:
-            from src.common.exceptions import ForbiddenError
-            raise ForbiddenError("Cannot upload on behalf of another user")
-
         if req.total_size_bytes > settings.max_image_size_bytes:
             raise ValidationError(f"File exceeds max size of {settings.max_image_size_bytes} bytes")
 

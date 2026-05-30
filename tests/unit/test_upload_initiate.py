@@ -31,7 +31,6 @@ def test_upload_initiate_returns_202(dynamodb_tables, s3_buckets, mock_settings:
 
         from src.handlers.upload_initiate import handler
         event = _make_event({
-            "user_id": "usr_abc",
             "filename": "photo.jpg",
             "content_type": "image/jpeg",
             "total_size_bytes": mock_settings.chunk_size_bytes,
@@ -52,7 +51,6 @@ def test_upload_initiate_rejects_unsupported_content_type(dynamodb_tables, s3_bu
     with patch("src.handlers.upload_initiate.get_settings", return_value=mock_settings):
         from src.handlers.upload_initiate import handler
         event = _make_event({
-            "user_id": "usr_abc",
             "filename": "script.exe",
             "content_type": "application/octet-stream",
             "total_size_bytes": 100,
@@ -66,7 +64,6 @@ def test_upload_initiate_rejects_file_exceeding_max_size(dynamodb_tables, s3_buc
     with patch("src.handlers.upload_initiate.get_settings", return_value=mock_settings):
         from src.handlers.upload_initiate import handler
         event = _make_event({
-            "user_id": "usr_abc",
             "filename": "huge.jpg",
             "content_type": "image/jpeg",
             "total_size_bytes": mock_settings.max_image_size_bytes + 1,
@@ -75,15 +72,3 @@ def test_upload_initiate_rejects_file_exceeding_max_size(dynamodb_tables, s3_buc
         assert resp["statusCode"] == 400
 
 
-@mock_aws
-def test_upload_initiate_rejects_wrong_user(dynamodb_tables, s3_buckets, mock_settings: Settings):
-    with patch("src.handlers.upload_initiate.get_settings", return_value=mock_settings):
-        from src.handlers.upload_initiate import handler
-        event = _make_event({
-            "user_id": "usr_OTHER",  # does not match JWT sub
-            "filename": "photo.jpg",
-            "content_type": "image/jpeg",
-            "total_size_bytes": 1024,
-        }, user_id="usr_abc")
-        resp = handler(event, MagicMock())
-        assert resp["statusCode"] == 403
