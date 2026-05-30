@@ -78,7 +78,7 @@ build:
 
 start-api: localstack-up build
 	sam local start-api \
-	  --env-vars .env.local \
+	  --env-vars .env \
 	  --docker-network image-service-net \
 	  --port 3000
 
