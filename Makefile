@@ -20,7 +20,7 @@ AWS_CMD = aws$(if $(AWS_ENDPOINT_URL), --endpoint-url=$(AWS_ENDPOINT_URL),)
 .DEFAULT_GOAL := help
 
 .PHONY: help install \
-        docker-build localstack-up localstack-start localstack-down \
+        docker-build localstack-up localstack-start localstack-down stop \
         cognito-up cognito-down cognito-init setup \
         logs-list logs-tail \
         migrate-local migrate-staging migrate-dry-run \
@@ -57,6 +57,10 @@ localstack-start: ## Start LocalStack without rebuilding
 	$(DC) up -d --wait
 
 localstack-down: ## Stop LocalStack and remove volumes
+	$(DC) down -v
+
+stop: ## Stop everything: kill SAM local API and tear down LocalStack
+	-lsof -ti :3000 | xargs kill 2>/dev/null || true
 	$(DC) down -v
 
 cognito-up: ## Start only the Cognito container
@@ -118,7 +122,7 @@ test-unit: ## Run unit tests with coverage (≥80% required)
 	poetry run pytest -m unit --cov=src --cov-report=term-missing --cov-fail-under=80
 
 test-integration: localstack-up ## Run integration tests against LocalStack
-	poetry run pytest -m integration -v
+	AWS_ENDPOINT_URL=http://localhost:4566 poetry run pytest -m integration -v
 
 test: test-unit test-integration ## Run all tests
 
@@ -144,6 +148,7 @@ start-api: localstack-start build ## Start SAM local API on http://localhost:300
 	  --port 3000 \
 	  --parameter-overrides \
 	    AwsEndpointUrl=http://image-service-localstack:4566 \
+	    S3PresignedEndpointUrl=http://localhost:4566 \
 	    PiiPepper=$(PII_PEPPER) \
 	    CognitoUserPoolId=$(COGNITO_USER_POOL_ID) \
 	    CognitoClientId=$(COGNITO_CLIENT_ID) \

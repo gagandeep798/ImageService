@@ -40,13 +40,16 @@ Parameters:
   AwsEndpointUrl:
     Type: String
     Default: ""
+  S3PresignedEndpointUrl:
+    Type: String
+    Default: ""
 
 Globals:
   Function:
     Runtime: python3.12
     MemorySize: 512
     Timeout: 30
-    Architectures: [x86_64]
+    Architectures: [arm64]
     Tracing: Active
     Environment:
       Variables:
@@ -80,6 +83,7 @@ Globals:
         CLOUDFRONT_KEY_PAIR_ID: !Ref CloudFrontKeyPairId
         CLOUDFRONT_PRIVATE_KEY_B64: !Ref CloudFrontPrivateKeyB64
         AWS_ENDPOINT_URL: !Ref AwsEndpointUrl
+        S3_PRESIGNED_ENDPOINT_URL: !Ref S3PresignedEndpointUrl
 
 # ── Conditions ────────────────────────────────────────────────────────────────
 Conditions:
