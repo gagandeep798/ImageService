@@ -1,5 +1,4 @@
-"""Unit tests for generate_thumbnails handler — SQS trigger."""
-import json
+"""Unit tests for generate_thumbnails handler — direct Lambda invocation."""
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,8 +10,8 @@ from src.repositories import image_repository as img_repo
 pytestmark = pytest.mark.unit
 
 
-def _sqs_event(image_id: str) -> dict:
-    return {"Records": [{"body": json.dumps({"image_id": image_id})}]}
+def _event(image_id: str) -> dict:
+    return {"image_id": image_id}
 
 
 def _minimal_jpeg() -> bytes:
@@ -52,7 +51,7 @@ def test_generates_thumbnails_and_updates_record(dynamodb_tables, s3_buckets, mo
     with patch("src.handlers.generate_thumbnails.get_settings", return_value=mock_settings), \
          patch("src.repositories.storage_repository.get_object_bytes", return_value=_minimal_jpeg()):
         from src.handlers.generate_thumbnails import handler
-        handler(_sqs_event("img_thm1"), MagicMock())
+        handler(_event("img_thm1"), MagicMock())
 
     image = img_repo.get_by_id(mock_settings, "img_thm1")
     assert "128.jpg" in image.thumbnail_keys

@@ -73,8 +73,10 @@ def check_and_reserve_quota(settings: Settings, user_id: str, size_bytes: int) -
     with monitor("users.quota_check"):
         resp = read_table.get_item(Key={"PK": f"USER#{user_id}", "SK": "PROFILE"})
     item = resp.get("Item")
-    if not item or item.get("status") != "ACTIVE":
-        raise QuotaExceededError("User not found or inactive")
+    if not item:
+        raise NotFoundError(f"User {user_id} not found")
+    if item.get("status") != "ACTIVE":
+        raise QuotaExceededError("User account is not active")
 
     current = int(item.get("storage_used_bytes", 0))
     quota = int(item.get("storage_quota_bytes", 0))
