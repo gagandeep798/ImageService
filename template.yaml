@@ -59,9 +59,9 @@ Globals:
         AWS_DEFAULT_REGION: !Ref AWS::Region
         POWERTOOLS_SERVICE_NAME: image-service
         POWERTOOLS_LOG_LEVEL: !Ref LogLevel
-        IMAGES_TABLE_NAME: !Ref ImagesTable
-        USERS_TABLE_NAME: !Ref UsersTable
-        MIGRATIONS_TABLE_NAME: !Ref MigrationsTable
+        IMAGES_TABLE_NAME: !If [IsLocal, "image-service-images", !Ref ImagesTable]
+        USERS_TABLE_NAME: !If [IsLocal, "image-service-users", !Ref UsersTable]
+        MIGRATIONS_TABLE_NAME: !If [IsLocal, "image-service-migrations", !Ref MigrationsTable]
         ORIGINALS_BUCKET: !Ref OriginalsBucket
         THUMBNAILS_BUCKET: !Ref ThumbnailsBucket
         QUARANTINE_BUCKET: !Ref QuarantineBucket
@@ -71,7 +71,7 @@ Globals:
         CHUNK_SIZE_BYTES: "5242880"
         UPLOAD_URL_TTL_SECONDS: "900"
         DOWNLOAD_URL_TTL_SECONDS: "3600"
-        DYNAMO_DELETE_ROLE_ARN: !GetAtt DynamoDBDeleteRole.Arn
+        DYNAMO_DELETE_ROLE_ARN: !If [IsNotLocal, !GetAtt DynamoDBDeleteRole.Arn, ""]
         COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
         COGNITO_CLIENT_ID: !Ref CognitoClientId
         COGNITO_ENDPOINT_URL: !Ref CognitoEndpointUrl
@@ -94,6 +94,7 @@ Resources:
 
   ImagesTable:
     Type: AWS::DynamoDB::Table
+    Condition: IsNotLocal
     Properties:
       TableName: image-service-images
       BillingMode: PAY_PER_REQUEST
@@ -130,6 +131,7 @@ Resources:
 
   UsersTable:
     Type: AWS::DynamoDB::Table
+    Condition: IsNotLocal
     Properties:
       TableName: image-service-users
       BillingMode: PAY_PER_REQUEST
@@ -149,6 +151,7 @@ Resources:
 
   MigrationsTable:
     Type: AWS::DynamoDB::Table
+    Condition: IsNotLocal
     Properties:
       TableName: image-service-migrations
       BillingMode: PAY_PER_REQUEST
@@ -365,6 +368,7 @@ Resources:
 
   DynamoDBReadRole:
     Type: AWS::IAM::Role
+    Condition: IsNotLocal
     Properties:
       RoleName: !Sub "image-service-dynamo-read-${Env}"
       AssumeRolePolicyDocument:
@@ -394,6 +398,7 @@ Resources:
 
   DynamoDBWriteRole:
     Type: AWS::IAM::Role
+    Condition: IsNotLocal
     Properties:
       RoleName: !Sub "image-service-dynamo-write-${Env}"
       AssumeRolePolicyDocument:
@@ -423,6 +428,7 @@ Resources:
 
   DynamoDBDeleteRole:
     Type: AWS::IAM::Role
+    Condition: IsNotLocal
     Properties:
       RoleName: !Sub "image-service-dynamo-delete-${Env}"
       AssumeRolePolicyDocument:
@@ -474,9 +480,9 @@ Resources:
             Method: POST
       Policies:
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref UsersTable
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
         - Statement:
             - Effect: Allow
               Action: [s3:CreateMultipartUpload]
@@ -497,9 +503,9 @@ Resources:
             Method: POST
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - Statement:
             - Effect: Allow
               Action: [s3:UploadPart]
@@ -520,9 +526,9 @@ Resources:
             Method: POST
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - Statement:
             - Effect: Allow
               Action: [s3:CompleteMultipartUpload]
@@ -543,11 +549,11 @@ Resources:
             Method: DELETE
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref UsersTable
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
         - Statement:
             - Effect: Allow
               Action: [s3:AbortMultipartUpload]
@@ -567,9 +573,9 @@ Resources:
           SCAN_COMPLETE_FUNCTION_ARN: !GetAtt ScanCompleteFunction.Arn
       Policies:
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref UsersTable
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
         - Statement:
             - Effect: Allow
               Action: [s3:GetObject, s3:HeadObject]
@@ -589,9 +595,9 @@ Resources:
           GENERATE_THUMBNAILS_FUNCTION_ARN: !GetAtt GenerateThumbnailsFunction.Arn
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - Statement:
             - Effect: Allow
               Action: [s3:CopyObject, s3:DeleteObject]
@@ -612,9 +618,9 @@ Resources:
       Timeout: 120
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - Statement:
             - Effect: Allow
               Action: [s3:GetObject]
@@ -638,7 +644,7 @@ Resources:
             Method: GET
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
   ListImagesFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -654,7 +660,7 @@ Resources:
             Method: GET
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
   DeleteImageFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -671,7 +677,7 @@ Resources:
       Policies:
         # Read: to fetch the image record and verify ownership
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         # Delete: STS assume-role to get the delete-tier resource
         - Statement:
             - Effect: Allow
@@ -693,7 +699,7 @@ Resources:
             Method: GET
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - Statement:
             - Effect: Allow
               Action: [s3:GetObject]
@@ -716,7 +722,7 @@ Resources:
               Authorizer: NONE
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - Statement:
             - Effect: Allow
               Action: [s3:HeadBucket]
@@ -739,7 +745,7 @@ Resources:
       Policies:
         # Read: paginate the user's images via UserImagesIndex
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         # Delete: STS assume-role for both tables (images + users)
         - Statement:
             - Effect: Allow
@@ -857,9 +863,9 @@ Resources:
               Authorizer: NONE
       Policies:
         - DynamoDBWritePolicy:
-            TableName: !Ref UsersTable
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
         - DynamoDBReadPolicy:
-            TableName: !Ref UsersTable
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
 
   AuthLoginFunction:
     Type: AWS::Serverless::Function
@@ -878,7 +884,7 @@ Resources:
               Authorizer: NONE
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref UsersTable
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
 
   AuthRefreshFunction:
     Type: AWS::Serverless::Function
@@ -1014,13 +1020,13 @@ Outputs:
     Value: !Sub "https://${ImageApi}.execute-api.${AWS::Region}.amazonaws.com/v1"
 
   ImagesTableName:
-    Value: !Ref ImagesTable
+    Value: !If [IsLocal, "image-service-images", !Ref ImagesTable]
 
   UsersTableName:
-    Value: !Ref UsersTable
+    Value: !If [IsLocal, "image-service-users", !Ref UsersTable]
 
   MigrationsTableName:
-    Value: !Ref MigrationsTable
+    Value: !If [IsLocal, "image-service-migrations", !Ref MigrationsTable]
 
   OriginalsBucketName:
     Value: !Ref OriginalsBucket
