@@ -27,6 +27,7 @@ TEST_SETTINGS = Settings(
     quarantine_bucket="test-quarantine",
     logs_bucket="test-logs",
     s3_endpoint_url=None,
+    s3_presigned_endpoint_url=None,
     max_image_size_bytes=20 * 1024 * 1024,
     chunk_size_bytes=5 * 1024 * 1024,
     upload_url_ttl_seconds=900,

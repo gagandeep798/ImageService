@@ -40,6 +40,19 @@ def test_dev_bypass_via_query_param():
     assert middleware.get_caller_user_id(event) == "usr_dev"
 
 
+def test_jwt_bearer_fallback():
+    # Minimal JWT with custom:user_id in payload (no signature check)
+    import base64, json
+    payload = base64.b64encode(json.dumps({"custom:user_id": "usr_jwt"}).encode()).decode().rstrip("=")
+    token = f"header.{payload}.sig"
+    event = {
+        "requestContext": {},
+        "queryStringParameters": {},
+        "headers": {"Authorization": f"Bearer {token}"},
+    }
+    assert middleware.get_caller_user_id(event) == "usr_jwt"
+
+
 def test_is_admin_returns_true():
     assert middleware.is_admin(_event(is_admin=True)) is True
 

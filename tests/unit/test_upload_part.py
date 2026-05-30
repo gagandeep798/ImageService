@@ -34,7 +34,7 @@ def test_returns_presigned_url(dynamodb_tables, mock_settings: Settings):
          patch("src.repositories.storage_repository.get_part_upload_url",
                return_value="https://s3.example.com/presigned"):
         from src.handlers.upload_part import handler
-        resp = handler(_event("img_part1", {"upload_id": "up-1", "part_number": 1, "size_bytes": 100}), MagicMock())
+        resp = handler(_event("img_part1", {"upload_id": "up-1", "part_number": 1}), MagicMock())
 
     assert resp["statusCode"] == 200
     data = json.loads(resp["body"])["data"]
@@ -51,7 +51,7 @@ def test_returns_403_for_wrong_owner(dynamodb_tables, mock_settings: Settings):
 
     with patch("src.handlers.upload_part.get_settings", return_value=mock_settings):
         from src.handlers.upload_part import handler
-        resp = handler(_event("img_part2", {"upload_id": "up-2", "part_number": 1, "size_bytes": 100}, user_id="usr_attacker"), MagicMock())
+        resp = handler(_event("img_part2", {"upload_id": "up-2", "part_number": 1}, user_id="usr_attacker"), MagicMock())
 
     assert resp["statusCode"] == 403
 
@@ -60,6 +60,6 @@ def test_returns_403_for_wrong_owner(dynamodb_tables, mock_settings: Settings):
 def test_returns_404_for_missing_image(dynamodb_tables, mock_settings: Settings):
     with patch("src.handlers.upload_part.get_settings", return_value=mock_settings):
         from src.handlers.upload_part import handler
-        resp = handler(_event("img_missing", {"upload_id": "up-x", "part_number": 1, "size_bytes": 100}), MagicMock())
+        resp = handler(_event("img_missing", {"upload_id": "up-x", "part_number": 1}), MagicMock())
 
     assert resp["statusCode"] == 404
