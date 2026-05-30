@@ -2,8 +2,6 @@
 
 Production-grade image upload service — AWS Lambda + S3 + DynamoDB.
 
-> See `.gitignore` for the full list of files that are never committed (secrets, Docker env, SAM artifacts).
-
 ## Prerequisites
 
 | Tool | Version | Install |
@@ -14,40 +12,54 @@ Production-grade image upload service — AWS Lambda + S3 + DynamoDB.
 | AWS SAM CLI | latest | `brew install aws-sam-cli` |
 | AWS CLI | v2 | `brew install awscli` |
 
-**Dev tooling:** ruff (lint), mypy (type check), pytest + moto (tests).
-
 ## Setup
 
 ```bash
-# 1. Install dependencies
-make install
-
-# 2. Copy the local config template
-cp .env.local.template .env.local
-# Edit .env.local — AWS credentials are always "test" for LocalStack
+make install                    # install Python dependencies
+cp docker/.env.sample docker/.env  # Docker image versions + port mappings
+cp .env.template .env           # fill in AWS credentials and local overrides
+make setup                      # start LocalStack + init Cognito (first time only)
 ```
 
-**SAM deploy profiles** are configured in `samconfig.toml` for environments: `local`, `dev`, `staging`, `prod`.
+After `make setup`, copy the printed `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_ID`, and `COGNITO_ENDPOINT_URL` values into your `.env`.
 
-## Quick Start
+## Local Development
 
 ```bash
-make install          # install Python dependencies
-make localstack-up    # build custom images and start all services
-make localstack-down  # stop all services and remove volumes
+make localstack-up    # rebuild images + start all services (blocks until healthy)
+make localstack-start # start without rebuilding
+make localstack-down  # stop and remove volumes
+
+make build            # sam build --use-container
+make start-api        # SAM local API on http://localhost:3000
+                      # use ?_dev_user_id=<uid> query param instead of a JWT
 ```
 
-## Project Layout
+| Local service | URL |
+|---------------|-----|
+| SAM API | `http://localhost:3000` |
+| LocalStack (AWS) | `http://localhost:4566` |
+| Cognito local | `http://localhost:9229` |
 
+## Tests
+
+```bash
+make test-unit         # moto-mocked, no Docker required (≥80% coverage)
+make test-integration  # hits real LocalStack — requires localstack-up
+make test              # both
 ```
-src/common/          Shared utilities — config, DynamoDB pool, S3, models, middleware
-src/repositories/    Data access — image, user, storage
-migrations/          DynamoDB schema migrations (applied before every deploy)
+
+## Code Quality
+
+```bash
+make lint        # ruff check
+make format      # ruff format
+make typecheck   # mypy (strict)
 ```
 
-## Database Migrations
+## Migrations
 
-DynamoDB schema changes are tracked in `migrations/` and applied before every deploy.
+DynamoDB schema changes live in `migrations/` and are applied automatically before every deploy.
 
 | Migration | Description |
 |-----------|-------------|
@@ -58,121 +70,91 @@ DynamoDB schema changes are tracked in `migrations/` and applied before every de
 | 0005 | Backfill thumbnail_keys on existing records |
 
 ```bash
-make migrate-local   # apply pending migrations to LocalStack
+make migrate-local    # apply to LocalStack
+make migrate-staging  # apply to staging
+make migrate-dry-run  # preview against prod (no changes)
 ```
 
-## Configuration
+## Deploy
 
-All settings are loaded from AWS Secrets Manager at Lambda cold-start via `src/common/config.get_settings()`.
-No environment variables are read in application code — only in `config.py` as fallbacks for local development.
-DynamoDB uses three separate IAM roles (read/write/delete) assumed via STS for least-privilege access.
-Email addresses are stored only as Argon2id hashes — never plaintext.
-All API responses follow the envelope: `{"data": ..., "error": ..., "meta": {request_id, timestamp}}`.
-
-## Running Tests
+### Dev
 
 ```bash
-make test-unit   # fast unit tests — no Docker required
+make deploy-dev
 ```
 
-Unit tests use `moto` to mock all AWS services in-process. Handler tests cover all 17 Lambda functions.
- `TEST_SETTINGS` (in `tests/conftest.py`) is the single source of truth for all test configuration — no hardcoded strings in test files.
+Runs: `sam build` → `sam deploy --config-env dev` → migrations.
 
-> **Docker env:** copy `docker/.env.sample` → `docker/.env` before starting services.
+### Staging
 
-## Local Services
+```bash
+make deploy-staging
+```
 
-| Service | URL |
-|---------|-----|
-| LocalStack (AWS) | `http://localhost:4566` |
+Runs: `sam build` → `sam deploy --config-env staging` → migrations → frontend sync to S3.
 
-> **Docker env:** copy `docker/.env.sample` → `docker/.env` before starting services.
+### Production
 
-ImageService is a production-grade, Instagram-style image upload backend built on AWS Lambda, S3, and DynamoDB. It supports chunked multipart uploads, an async processing pipeline (AV scan → thumbnails), paginated listing with write-sharded DynamoDB GSIs, GDPR erasure, and full observability via CloudWatch and X-Ray.
+```bash
+make deploy-prod
+```
 
-## Infrastructure
+Runs: `sam build` → 3-second abort window → `sam deploy --config-env prod` → migrations → frontend sync to S3.
 
-All AWS resources are defined in `template.yaml` (AWS SAM). Parameterised by `Env` (local/dev/staging/prod).
-**DynamoDB tables:** images (with UserImagesIndex + StatusIndex GSIs), users, migrations, secret-hashes — all with PITR and TTL.
-**S3 buckets:** originals (lifecycle: IA@30d, Glacier@180d, abort incomplete multipart@7d), thumbnails, quarantine (SSE-KMS), logs.
-**SQS queues:** FinalizeQueue → FinalizeDLQ, ScanQueue → ScanDLQ, ThumbnailQueue — all with DLQ redrive after 3 failures.
-**IAM roles:** DynamoDBReadRole (GetItem/Query/Scan), DynamoDBWriteRole (PutItem/UpdateItem), DynamoDBDeleteRole (UpdateItem restricted to soft-delete fields only).
-**Upload Lambda functions:** UploadInitiate, UploadPart, UploadComplete, UploadAbort, FinalizeUpload (SQS, 1024MB, 60s).
-**Processing Lambda functions:** ScanComplete, GenerateThumbnails (both SQS-triggered).
-**API Lambda functions:** GetImage, ListImages, DeleteImage, Download, Health (unauthenticated), GdprDeleteUser (300s timeout).
-**Operational Lambda functions:** SlackNotifier (SNS), ScaleLambda (EventBridge), BackupSecrets (daily cron).
+Frontend only (without full backend deploy):
+
+```bash
+make deploy-frontend-staging
+make deploy-frontend-prod     # 3-second abort window
+```
+
+## Logs
+
+```bash
+make logs-list                            # list all Lambda log groups
+make logs-tail FUNCTION=upload-initiate APP_ENV=staging  # tail last 5 min
+```
 
 ## Architecture
 
 ```
-Client → API Gateway (WAF + JWT Authorizer) → Lambda → DynamoDB / S3
-                                                      → SQS → finalize → scan → thumbnails
+Client → API Gateway (Cognito JWT authorizer) → Lambda → DynamoDB / S3
+                                                       → SQS → finalize → scan → thumbnails
 CloudFront ← S3 originals (OAC)
 ```
-**Observability:** CloudWatch alarms (per-service + composite), SNS alerts topic, CloudTrail with S3 data events, Athena workgroup with saved queries.
 
-## Deploy
+**Upload flow (4 steps):**
+1. `POST /images` — validates request, reserves quota, creates S3 multipart session, returns `{image_id, upload_id, s3_key, chunk_size_bytes}`
+2. `POST /images/{id}/parts` — returns presigned S3 URL per chunk; client uploads directly to S3
+3. `POST /images/{id}/complete` — completes S3 multipart, enqueues to FinalizeQueue
+4. `DELETE /images/{id}/upload` — aborts S3 multipart, marks `ABORTED`
 
-```bash
-make deploy-staging   # sam deploy → migrate → smoke test
-make deploy-prod      # same + manual GitHub approval gate
-```
+**Async processing:** FinalizeQueue → `finalize_upload` → ScanQueue → `scan_complete` → ThumbnailQueue → `generate_thumbnails`
 
-**Running locally:**
-```bash
-make build      # sam build --use-container
-make start-api  # SAM local API on http://localhost:3000
-```
+**Image status lifecycle:** `PENDING` → `PENDING_FINALIZE` → `SCANNING` → `ACTIVE | QUARANTINE | ABORTED | DELETED`
+
+## Infrastructure
+
+All AWS resources are defined in `template.yaml` (AWS SAM), parameterised by `Env` (dev/staging/prod).
+
+**DynamoDB:** images table (UserImagesIndex + write-sharded StatusIndex GSIs), users, migrations, secret-hashes — all with PITR and TTL. Deletion is always soft: status → `DELETED`, TTL set to 7 days.
+
+**S3:** originals (lifecycle: IA@30d, Glacier@180d), thumbnails, quarantine (SSE-KMS), logs.
+
+**SQS:** FinalizeQueue, ScanQueue, ThumbnailQueue — all with DLQ redrive after 3 failures.
+
+**IAM:** Three DynamoDB roles assumed via STS — read (GetItem/Query/Scan), write (PutItem/UpdateItem), delete (UpdateItem restricted to soft-delete fields only).
+
+**Observability:** CloudWatch alarms + composite alarms, SNS alerts, CloudTrail with S3 data events, Athena workgroup with saved queries, X-Ray tracing.
+
+## Configuration
+
+Settings are loaded from AWS Secrets Manager at Lambda cold-start via `src/common/config.get_settings()` (`@lru_cache` — one call per cold start). Local dev falls back to env vars from `.env`.
+
+All API responses use the envelope: `{"data": ..., "error": ..., "meta": {"request_id": "...", "timestamp": "..."}}`.
 
 ## CI/CD
 
-Every pull request runs a full CI pipeline before merging.
-**CI pipeline:**
-- Lint (ruff)
-- Type check (mypy)
-- Unit tests (≥80% coverage)
-- SAM build
-- Integration tests with LocalStack
+Every pull request runs: lint → typecheck → unit tests (≥80% coverage) → SAM build → integration tests.
 
-Merging to `main` automatically deploys to staging; production requires manual approval in GitHub.
-Deploy pipeline: staging → run migrations → smoke test /health → manual approval → prod.
-
-## Operational Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `scripts/init_localstack.sh` | Creates all AWS resources inside LocalStack at startup |
-| `scripts/fetch_secrets.sh` | Pulls Secrets Manager values → .env.secrets files |
-| `scripts/gdpr_erase_user.py` | Operator CLI for out-of-band GDPR erasure |
-
-```bash
-make install          # install Python dependencies
-make fetch-secrets    # pull secrets → .env.secrets + docker/.env.secrets
-make localstack-up    # start all services
-make start-api        # SAM local API on http://localhost:3000
-```
-
-## Documentation
-
-### Services
-| Doc | What it covers |
-|-----|----------------|
-| [Upload Service](docs/services/upload-service.md) | Chunked multipart upload flow, resume, abort |
-| [Image Service](docs/services/image-service.md) | Metadata CRUD, listing, download |
-| [User Service](docs/services/user-service.md) | User management, quota, PII hashing |
-| [Processing Pipeline](docs/services/processing-pipeline.md) | Finalize → scan → thumbnail generation |
-| [Observability](docs/services/observability.md) | Logs, metrics, tracing, CloudTrail, Athena |
-| [Security](docs/services/security.md) | Auth, WAF, VPC, Secrets Manager, IAM, PII |
-| [Infrastructure](docs/services/infrastructure.md) | SAM template, DynamoDB schema, S3 buckets, SQS, Kinesis |
-
-### Activities
-| Doc | What it covers |
-|-----|----------------|
-| [Local Development](docs/activities/local-development.md) | First-time setup, running the stack, seeding data |
-| [Deploying](docs/activities/deploying.md) | Staging and production deploy workflow |
-| [Database Migrations](docs/activities/migrations.md) | Writing, applying, and rolling back DynamoDB migrations |
-| [GDPR Erasure](docs/activities/gdpr-erasure.md) | Handling right-to-erasure requests |
-| [Incident Response](docs/activities/incident-response.md) | Alert routing, runbook index, escalation path |
-
-### Runbooks
-`runbooks/` — operational incident response procedures for DLQ messages, DynamoDB throttling, Lambda errors, user quota, GDPR erasure, and S3 replication lag.
+Merging to `main` deploys automatically to staging. Production requires manual approval in GitHub.
