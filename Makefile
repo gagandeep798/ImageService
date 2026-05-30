@@ -151,6 +151,18 @@ deploy-pipeline-local: ## Deploy finalize/scan/thumbnail Lambdas to LocalStack a
 	bash scripts/deploy-pipeline-local.sh
 
 deploy-local: localstack-start build ## Deploy full CloudFormation stack to LocalStack via samlocal
+	@echo "--- pre-deploy: removing any failed stack and init-script tables ---"
+	@AWS_ENDPOINT_URL=http://localhost:4566 aws cloudformation delete-stack \
+	  --stack-name image-service-local --region us-east-1 2>/dev/null || true
+	@AWS_ENDPOINT_URL=http://localhost:4566 aws cloudformation wait stack-delete-complete \
+	  --stack-name image-service-local --region us-east-1 2>/dev/null || true
+	@for t in image-service-images image-service-users image-service-migrations; do \
+	  AWS_ENDPOINT_URL=http://localhost:4566 aws dynamodb delete-table \
+	    --table-name $$t --region us-east-1 2>/dev/null || true; \
+	done
+	@AWS_ENDPOINT_URL=http://localhost:4566 aws dynamodb wait table-not-exists \
+	  --table-name image-service-images --region us-east-1 2>/dev/null || true
+	@echo "--- deploying stack ---"
 	AWS_ENDPOINT_URL=http://localhost:4566 poetry run samlocal deploy \
 	  --config-env local \
 	  --parameter-overrides \
