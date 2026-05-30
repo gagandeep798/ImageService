@@ -160,11 +160,34 @@ local: localstack-start build ## Run local dev stack — LocalStack + SAM API on
 	    CognitoClientId=$(COGNITO_CLIENT_ID) \
 	    CognitoEndpointUrl=http://image-service-cognito-local:9229
 
-dev: build ## Build and deploy to dev environment
-	AWS_ENDPOINT_URL= sam deploy --config-env dev
-	AWS_ENDPOINT_URL= poetry run python migrations/runner.py --env dev
-	$(MAKE) frontend-build
-	AWS_ENDPOINT_URL= $(MAKE) _deploy-frontend STACK_ENV=dev
+dev: localstack-start build ## Full CloudFormation deploy to LocalStack + SAM API on :3000 + frontend on :5173
+	@AWS_ENDPOINT_URL=http://localhost:4566 aws cloudformation delete-stack \
+	  --stack-name image-service-local --region us-east-1 2>/dev/null || true
+	@AWS_ENDPOINT_URL=http://localhost:4566 aws cloudformation wait stack-delete-complete \
+	  --stack-name image-service-local --region us-east-1 2>/dev/null || true
+	AWS_ENDPOINT_URL=http://localhost:4566 poetry run samlocal deploy \
+	  --config-env local \
+	  --parameter-overrides \
+	    Env=local \
+	    LogLevel=DEBUG \
+	    AwsEndpointUrl=http://image-service-localstack:4566 \
+	    S3PresignedEndpointUrl=http://localhost:4566 \
+	    PiiPepper=$(PII_PEPPER) \
+	    CognitoUserPoolId=$(COGNITO_USER_POOL_ID) \
+	    CognitoClientId=$(COGNITO_CLIENT_ID) \
+	    CognitoEndpointUrl=http://image-service-cognito-local:9229
+	AWS_ENDPOINT_URL=http://localhost:4566 bash scripts/wire-notifications.sh local
+	$(DC) up -d frontend
+	sam local start-api \
+	  --docker-network image-service-net \
+	  --port 3000 \
+	  --parameter-overrides \
+	    AwsEndpointUrl=http://image-service-localstack:4566 \
+	    S3PresignedEndpointUrl=http://localhost:4566 \
+	    PiiPepper=$(PII_PEPPER) \
+	    CognitoUserPoolId=$(COGNITO_USER_POOL_ID) \
+	    CognitoClientId=$(COGNITO_CLIENT_ID) \
+	    CognitoEndpointUrl=http://image-service-cognito-local:9229
 
 staging: build ## Build and deploy to staging environment
 	AWS_ENDPOINT_URL= sam deploy --config-env staging --no-fail-on-empty-changeset
