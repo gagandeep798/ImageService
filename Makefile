@@ -161,26 +161,26 @@ local: localstack-start build ## Run local dev stack — LocalStack + SAM API on
 	    CognitoEndpointUrl=http://image-service-cognito-local:9229
 
 dev: build ## Build and deploy to dev environment
-	sam deploy --config-env dev
-	poetry run python migrations/runner.py --env dev
+	AWS_ENDPOINT_URL= sam deploy --config-env dev
+	AWS_ENDPOINT_URL= poetry run python migrations/runner.py --env dev
 	$(MAKE) frontend-build
-	$(MAKE) _deploy-frontend STACK_ENV=dev
+	AWS_ENDPOINT_URL= $(MAKE) _deploy-frontend STACK_ENV=dev
 
 staging: build ## Build and deploy to staging environment
-	sam deploy --config-env staging --no-fail-on-empty-changeset
-	bash scripts/wire-notifications.sh staging
-	poetry run python migrations/runner.py --env staging
+	AWS_ENDPOINT_URL= sam deploy --config-env staging --no-fail-on-empty-changeset
+	AWS_ENDPOINT_URL= bash scripts/wire-notifications.sh staging
+	AWS_ENDPOINT_URL= poetry run python migrations/runner.py --env staging
 	$(MAKE) frontend-build
-	$(MAKE) _deploy-frontend STACK_ENV=staging
+	AWS_ENDPOINT_URL= $(MAKE) _deploy-frontend STACK_ENV=staging
 
 prod: build ## Build and deploy to production (3s abort window)
 	@echo "Deploying to PRODUCTION. Ctrl-C to abort..."
 	@sleep 3
-	sam deploy --config-env prod --no-fail-on-empty-changeset
-	bash scripts/wire-notifications.sh prod
-	poetry run python migrations/runner.py --env prod
+	AWS_ENDPOINT_URL= sam deploy --config-env prod --no-fail-on-empty-changeset
+	AWS_ENDPOINT_URL= bash scripts/wire-notifications.sh prod
+	AWS_ENDPOINT_URL= poetry run python migrations/runner.py --env prod
 	$(MAKE) frontend-build
-	$(MAKE) _deploy-frontend STACK_ENV=prod
+	AWS_ENDPOINT_URL= $(MAKE) _deploy-frontend STACK_ENV=prod
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
 
