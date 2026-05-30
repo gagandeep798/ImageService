@@ -411,6 +411,7 @@ def _to_record(item: dict) -> ImageRecord:
     return ImageRecord(
         image_id=item["image_id"],
         user_id=item["user_id"],
+        filename=item.get("filename"),
         title=item.get("title"),
         description=item.get("description"),
         tags=tags,
