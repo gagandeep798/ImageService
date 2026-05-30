@@ -1,21 +1,14 @@
 """Data access layer for the users DynamoDB table."""
 from __future__ import annotations
 
-import base64
-import hashlib
-import hmac as _hmac
 from datetime import UTC, datetime
 
-from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError
 from boto3.resources.base import ServiceResource
 
 from src.common.config import Settings
 from src.common.dynamo import get_delete_resource, get_read_resource, get_write_resource, monitor
 from src.common.exceptions import NotFoundError, QuotaExceededError
 from src.common.models import UserRecord
-
-_ph = PasswordHasher()
 
 
 def _now() -> str:
@@ -26,37 +19,14 @@ def _ttl_90_days() -> int:
     return int(datetime.now(UTC).timestamp()) + 90 * 86400
 
 
-def _email_index_key(email: str, pepper: str) -> str:
-    """Deterministic HMAC-SHA256 of the canonical email — safe to use as a GSI key."""
-    mac = _hmac.new(pepper.encode(), email.lower().strip().encode(), hashlib.sha256)
-    return base64.b64encode(mac.digest()).decode()
-
-
-def hash_password(password: str) -> str:
-    return _ph.hash(password)
-
-
-def verify_password(password: str, stored_hash: str) -> bool:
-    try:
-        return _ph.verify(stored_hash, password)
-    except VerifyMismatchError:
-        return False
-    except Exception:
-        return False
-
-
-# ── Repository ───────────────────────────────────────────────────────────────
-
 def _table(resource: ServiceResource, settings: Settings):  # type: ignore[return]
     return resource.Table(settings.users_table_name)
 
 
-def create_user(settings: Settings, user_id: str, display_name: str, email: str, password: str) -> UserRecord:
-    """Create a new user record. Raises ConditionalCheckFailedException if user_id already exists."""
+def create_user(settings: Settings, user_id: str, display_name: str) -> UserRecord:
+    """Create a new user profile record. Cognito owns credentials; this stores quota/metadata only."""
     resource = get_write_resource(settings)
     table = _table(resource, settings)
-    email_hash = _email_index_key(email, settings.pii_pepper)
-    password_hash = hash_password(password)
     now = _now()
 
     item = {
@@ -64,9 +34,6 @@ def create_user(settings: Settings, user_id: str, display_name: str, email: str,
         "SK": "PROFILE",
         "user_id": user_id,
         "display_name": display_name,
-        "email_hash": email_hash,
-        "password_hash": password_hash,
-        "EmailHashIndex_PK": f"EMAILHASH#{email_hash}",
         "status": "ACTIVE",
         "storage_used_bytes": 0,
         "storage_quota_bytes": 10 * 1024 * 1024 * 1024,
@@ -92,37 +59,6 @@ def get_user(settings: Settings, user_id: str) -> UserRecord:
     item = resp.get("Item")
     if not item or item.get("status") == "DELETED":
         raise NotFoundError(f"User {user_id} not found")
-
-    return _to_record(item)
-
-
-def get_user_by_email(settings: Settings, email: str) -> UserRecord:
-    """Look up a user by email using the EmailHashIndex GSI. Raises NotFoundError if missing."""
-    resource = get_read_resource(settings)
-    table = _table(resource, settings)
-    lookup_key = f"EMAILHASH#{_email_index_key(email, settings.pii_pepper)}"
-
-    with monitor("users.get_by_email"):
-        resp = table.query(
-            IndexName="EmailHashIndex",
-            KeyConditionExpression="EmailHashIndex_PK = :pk",
-            ExpressionAttributeValues={":pk": lookup_key},
-            Limit=1,
-        )
-
-    items = resp.get("Items", [])
-    if not items:
-        raise NotFoundError("User not found")
-
-    # GSI may be KEYS_ONLY — fetch the full item
-    pk = items[0]["PK"]
-    sk = items[0].get("SK", "PROFILE")
-    with monitor("users.get_by_email_full"):
-        full_resp = table.get_item(Key={"PK": pk, "SK": sk})
-
-    item = full_resp.get("Item")
-    if not item or item.get("status") == "DELETED":
-        raise NotFoundError("User not found")
 
     return _to_record(item)
 
