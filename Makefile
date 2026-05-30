@@ -1,4 +1,5 @@
 .PHONY: install docker-build localstack-up localstack-start localstack-down \
+        cognito-up cognito-down cognito-init \
         migrate-local migrate-staging migrate-dry-run \
         test-unit test-integration test lint format typecheck \
         build start-api logs-list logs-tail \
@@ -33,6 +34,40 @@ localstack-start:
 
 localstack-down:
 	docker compose -f docker/docker-compose.yml down -v
+
+cognito-up:
+	docker compose -f docker/docker-compose.yml up -d cognito-local
+
+cognito-down:
+	docker compose -f docker/docker-compose.yml stop cognito-local
+	docker compose -f docker/docker-compose.yml rm -f cognito-local
+
+cognito-init:
+	@POOL_ID=$$(aws cognito-idp create-user-pool \
+	  --endpoint-url http://localhost:9229 \
+	  --region us-east-1 \
+	  --pool-name image-service-users \
+	  --username-attributes email \
+	  --schema '[{"Name":"user_id","AttributeDataType":"String","Mutable":false,"Required":false}]' \
+	  --query 'UserPool.Id' --output text) && \
+	CLIENT_ID=$$(aws cognito-idp create-user-pool-client \
+	  --endpoint-url http://localhost:9229 \
+	  --region us-east-1 \
+	  --user-pool-id $$POOL_ID \
+	  --client-name image-service-client \
+	  --no-generate-secret \
+	  --explicit-auth-flows ALLOW_USER_PASSWORD_AUTH ALLOW_REFRESH_TOKEN_AUTH ALLOW_USER_SRP_AUTH \
+	  --query 'UserPoolClient.ClientId' --output text) && \
+	aws cognito-idp create-group \
+	  --endpoint-url http://localhost:9229 \
+	  --region us-east-1 \
+	  --user-pool-id $$POOL_ID \
+	  --group-name admins 2>/dev/null || true && \
+	echo "" && \
+	echo "Add these to your .env:" && \
+	echo "COGNITO_USER_POOL_ID=$$POOL_ID" && \
+	echo "COGNITO_CLIENT_ID=$$CLIENT_ID" && \
+	echo "COGNITO_ENDPOINT_URL=http://localhost:9229"
 
 logs-list:
 	$(AWS_CMD) logs describe-log-groups
@@ -79,14 +114,16 @@ typecheck:
 build:
 	sam build --use-container
 
-start-api: localstack-up build
+start-api: localstack-start build
 	sam local start-api \
 	  --docker-network image-service-net \
 	  --port 3000 \
 	  --parameter-overrides \
 	    AwsEndpointUrl=http://image-service-localstack:4566 \
-	    JwtSecret=$(shell grep '^JWT_SECRET=' .env | cut -d= -f2-) \
-	    PiiPepper=$(shell grep '^PII_PEPPER=' .env | cut -d= -f2-)
+	    PiiPepper=$(shell grep '^PII_PEPPER=' .env | cut -d= -f2-) \
+	    CognitoUserPoolId=$(shell grep '^COGNITO_USER_POOL_ID=' .env | cut -d= -f2-) \
+	    CognitoClientId=$(shell grep '^COGNITO_CLIENT_ID=' .env | cut -d= -f2-) \
+	    CognitoEndpointUrl=$(shell grep '^COGNITO_ENDPOINT_URL=' .env | cut -d= -f2-)
 
 # ── Deploys ───────────────────────────────────────────────────────────────────
 

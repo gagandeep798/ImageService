@@ -9,6 +9,7 @@ networks:
 
 volumes:
   localstack_data:
+  cognito_data:
   frontend_node_modules:
 
 x-docker-env: &docker-env
@@ -49,6 +50,17 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+    networks:
+      - image-service-net
+    restart: unless-stopped
+
+  cognito-local:
+    image: jagregory/cognito-local:latest
+    container_name: image-service-cognito-local
+    ports:
+      - "${COGNITO_PORT:-9229}:9229"
+    volumes:
+      - cognito_data:/app/.cognito
     networks:
       - image-service-net
     restart: unless-stopped
