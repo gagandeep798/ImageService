@@ -46,7 +46,7 @@ def up(dynamo: object, images_table_name: str) -> None:
                     {"AttributeName": "GSI2PK", "KeyType": "HASH"},
                     {"AttributeName": "GSI2SK", "KeyType": "RANGE"},
                 ],
-                "Projection": {"ProjectionType": "KEYS_ONLY"},
+                "Projection": {"ProjectionType": "ALL"},
             }
         })
         attr_defs += [

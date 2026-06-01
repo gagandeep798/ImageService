@@ -120,9 +120,7 @@ Resources:
           KeySchema:
             - {AttributeName: GSI2PK, KeyType: HASH}
             - {AttributeName: GSI2SK, KeyType: RANGE}
-          Projection:
-            ProjectionType: INCLUDE
-            NonKeyAttributes: [user_id, title, s3_key, content_type, size_bytes]
+          Projection: {ProjectionType: ALL}
       TimeToLiveSpecification:
         AttributeName: ttl
         Enabled: true
