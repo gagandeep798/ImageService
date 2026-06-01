@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 import json
-import os
 import urllib.request
-from typing import Optional
 
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext
@@ -31,7 +29,7 @@ _SEVERITY_EMOJI: dict[str, str] = {
 }
 
 
-def _find_runbook(alarm_name: str) -> Optional[str]:
+def _find_runbook(alarm_name: str) -> str | None:
     """Return the runbook path for an alarm name using keyword matching, or None if not found."""
     for key, runbook in _RUNBOOK_MAP.items():
         if key.lower() in alarm_name.lower():
@@ -74,7 +72,8 @@ def _post_to_slack(webhook_url: str, message: dict) -> None:
 
 def handler(event: dict, context: LambdaContext) -> dict:  # noqa: ARG001
     """Lambda entry point — formats CloudWatch alarm SNS notifications and posts them to Slack."""
-    webhook_url = os.environ.get("SLACK_WEBHOOK_URL", "")
+    from src.common.config import get_settings
+    webhook_url = get_settings().slack_webhook_url
     if not webhook_url:
         logger.warning("SLACK_WEBHOOK_URL not configured")
         return {"ok": False}

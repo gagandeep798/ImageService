@@ -2,8 +2,6 @@
 EventBridge trigger on Lambda Throttles alarm — temporarily increases
 reserved concurrency by 20% as auto-remediation.
 """
-import json
-import os
 
 import boto3
 from aws_lambda_powertools import Logger
@@ -18,7 +16,8 @@ def _get_lambda_client() -> boto3.client:
     """Return the module-level Lambda boto3 client, creating it on first call."""
     global _lambda_client
     if _lambda_client is None:
-        _lambda_client = boto3.client("lambda", region_name=os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
+        from src.common.config import get_settings
+        _lambda_client = boto3.client("lambda", region_name=get_settings().aws_region)
     return _lambda_client
 
 

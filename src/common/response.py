@@ -6,17 +6,15 @@ contract: ``{statusCode, headers, body}``.  The body always follows the envelope
     {"data": <payload | null>, "error": <null | {code, message}>, "meta": {request_id, timestamp}}
 """
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-
-from aws_lambda_powertools.utilities.typing import LambdaContext
 
 from src.common.exceptions import ImageServiceError
 
 
 def _now_iso() -> str:
     """Return the current UTC time as an ISO-8601 string."""
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def ok(data: Any, request_id: str = "", status_code: int = 200) -> dict:

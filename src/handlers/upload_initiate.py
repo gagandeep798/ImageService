@@ -11,11 +11,11 @@ from aws_lambda_powertools.metrics import MetricUnit
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from ulid import ULID
 
+from src.common import response as resp
 from src.common.config import get_settings
 from src.common.exceptions import ImageServiceError, ValidationError
 from src.common.middleware import get_caller_user_id, get_request_id
 from src.common.models import UploadInitiateRequest
-from src.common import response as resp
 from src.repositories import image_repository as img_repo
 from src.repositories import storage_repository as store_repo
 from src.repositories import user_repository as user_repo
@@ -40,11 +40,10 @@ def handler(event: dict, context: LambdaContext) -> dict:
     try:
         caller_id = get_caller_user_id(event)
         body = json.loads(event.get("body") or "{}")
-        req = UploadInitiateRequest(**body)
-
-        if req.user_id != caller_id:
-            from src.common.exceptions import ForbiddenError
-            raise ForbiddenError("Cannot upload on behalf of another user")
+        try:
+            req = UploadInitiateRequest(**body)
+        except Exception as exc:
+            raise ValidationError(str(exc)) from exc
 
         if req.total_size_bytes > settings.max_image_size_bytes:
             raise ValidationError(f"File exceeds max size of {settings.max_image_size_bytes} bytes")
@@ -66,6 +65,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
             title=req.title,
             description=req.description,
             tags=req.tags,
+            filename=req.filename,
         )
 
         metrics.add_metric(name="upload.initiated", unit=MetricUnit.Count, value=1)

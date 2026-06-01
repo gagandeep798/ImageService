@@ -7,11 +7,7 @@ DynamoDB item; ``ImageResponse`` is its public-facing subset.
 """
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Optional
-
 from pydantic import BaseModel, Field, field_validator
-
 
 ALLOWED_CONTENT_TYPES = frozenset({"image/jpeg", "image/png", "image/webp", "image/gif"})
 
@@ -21,12 +17,11 @@ ImageStatus = str  # PENDING | PENDING_FINALIZE | SCANNING | ACTIVE | QUARANTINE
 class UploadInitiateRequest(BaseModel):
     """Request body for POST /images — step 1 of the chunked upload flow."""
 
-    user_id: str = Field(min_length=1, max_length=128)
     filename: str = Field(min_length=1, max_length=255)
     content_type: str
     total_size_bytes: int = Field(gt=0)
-    title: Optional[str] = Field(default=None, max_length=256)
-    description: Optional[str] = Field(default=None, max_length=2048)
+    title: str | None = Field(default=None, max_length=256)
+    description: str | None = Field(default=None, max_length=2048)
     tags: list[str] = Field(default_factory=list, max_length=20)
 
     @field_validator("content_type")
@@ -43,7 +38,6 @@ class UploadPartRequest(BaseModel):
 
     upload_id: str
     part_number: int = Field(ge=1, le=10000)
-    size_bytes: int = Field(gt=0)
 
 
 class UploadCompleteRequest(BaseModel):
@@ -71,20 +65,21 @@ class ImageRecord(BaseModel):
 
     image_id: str
     user_id: str
-    title: Optional[str] = None
-    description: Optional[str] = None
+    filename: str | None = None
+    title: str | None = None
+    description: str | None = None
     tags: list[str] = Field(default_factory=list)
     status: ImageStatus
     s3_key: str
-    upload_id: Optional[str] = None
-    size_bytes: Optional[int] = None
+    upload_id: str | None = None
+    size_bytes: int | None = None
     content_type: str
-    width: Optional[int] = None
-    height: Optional[int] = None
+    width: int | None = None
+    height: int | None = None
     thumbnail_keys: dict[str, str] = Field(default_factory=dict)
     created_at: str
     updated_at: str
-    deleted_at: Optional[str] = None
+    deleted_at: str | None = None
 
 
 class ImageResponse(BaseModel):
@@ -92,15 +87,17 @@ class ImageResponse(BaseModel):
 
     image_id: str
     user_id: str
-    title: Optional[str] = None
-    description: Optional[str] = None
+    filename: str | None = None
+    title: str | None = None
+    description: str | None = None
     tags: list[str] = Field(default_factory=list)
     status: ImageStatus
-    size_bytes: Optional[int] = None
+    size_bytes: int | None = None
     content_type: str
-    width: Optional[int] = None
-    height: Optional[int] = None
+    width: int | None = None
+    height: int | None = None
     thumbnail_keys: dict[str, str] = Field(default_factory=dict)
+    thumbnail_url: str | None = None
     created_at: str
     updated_at: str
 
@@ -109,26 +106,43 @@ class ListImagesResponse(BaseModel):
     """Paginated list response returned by GET /images."""
 
     items: list[ImageResponse]
-    next_cursor: Optional[str] = None
+    next_cursor: str | None = None
     count: int
 
 
 class UserRecord(BaseModel):
-    """DynamoDB user profile record.
-
-    Email is stored only as a hashed value (``email_hash`` + ``email_salt``) —
-    the plaintext address is never persisted.
-    """
+    """DynamoDB user profile record. Credentials are owned by Cognito."""
 
     user_id: str
     display_name: str
-    email_hash: str
-    email_salt: str
     status: str
     storage_used_bytes: int = 0
     storage_quota_bytes: int = 10 * 1024 * 1024 * 1024
     image_count: int = 0
     created_at: str
     updated_at: str
-    deleted_at: Optional[str] = None
-    gdpr_erased_at: Optional[str] = None
+    deleted_at: str | None = None
+    gdpr_erased_at: str | None = None
+
+
+class SignupRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str = Field(min_length=1, max_length=100)
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "Bearer"
+    expires_in: int
+    user_id: str

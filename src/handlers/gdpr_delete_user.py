@@ -10,15 +10,15 @@ Accessible by the user themselves (self-erasure) or an admin.  The erasure
 event is logged via CloudTrail for legal compliance — the log contains only
 ``user_id`` (a system identifier) and timestamps, not personal data.
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from aws_lambda_powertools import Logger, Metrics, Tracer
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
+from src.common import response as resp
 from src.common.config import get_settings
 from src.common.exceptions import ForbiddenError, ImageServiceError
 from src.common.middleware import get_caller_user_id, get_request_id, is_admin
-from src.common import response as resp
 from src.repositories import image_repository as img_repo
 from src.repositories import user_repository as user_repo
 
@@ -62,7 +62,7 @@ def handler(event: dict, context: LambdaContext) -> dict:  # noqa: ARG001
         # Erase user record via delete-tier resource (gdpr=True sets gdpr_erased_at + 90-day TTL)
         user_repo.soft_delete_user(settings, user_id, gdpr=True)
 
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         logger.info("gdpr_erasure_complete", user_id=user_id, images_deleted=deleted_count)
 
         return resp.ok({"user_id": user_id, "erased_at": now, "images_deleted": deleted_count}, request_id)

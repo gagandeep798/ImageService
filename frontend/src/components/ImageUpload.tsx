@@ -44,8 +44,8 @@ export default function ImageUpload({ onSuccess, onClose }: Props) {
       const parts: { part_number: number; etag: string }[] = []
       for (let i = 0; i < totalChunks; i++) {
         const chunk = file.slice(i * chunkBytes, (i + 1) * chunkBytes)
-        const { upload_url } = await api.getPartUrl(init.image_id, i + 1, init.upload_id)
-        const etag = await putChunk(upload_url, chunk)
+        const { presigned_part_url } = await api.getPartUrl(init.image_id, i + 1, init.upload_id)
+        const etag = await putChunk(presigned_part_url, chunk)
         parts.push({ part_number: i + 1, etag })
         setProgress(Math.round(((i + 1) / totalChunks) * 100))
       }

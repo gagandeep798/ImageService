@@ -4,15 +4,12 @@ import { useAuth } from '../hooks/useAuth'
 import AuthLayout from '../components/AuthLayout'
 import s from '../styles/form.module.css'
 
-type Step = 'register' | 'confirm'
-
 export default function SignupPage() {
-  const { signUp, confirm } = useAuth()
+  const { signUp } = useAuth()
   const navigate = useNavigate()
-  const [step, setStep] = useState<Step>('register')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [code, setCode] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -21,9 +18,8 @@ export default function SignupPage() {
     setError(null)
     setLoading(true)
     try {
-      const nextStep = await signUp(email, password)
-      if (nextStep === 'CONFIRM_SIGN_UP') setStep('confirm')
-      else navigate('/login')
+      await signUp(email, password, displayName)
+      navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign up failed')
     } finally {
@@ -31,47 +27,21 @@ export default function SignupPage() {
     }
   }
 
-  async function handleConfirm(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
-    try {
-      await confirm(email, code)
-      navigate('/login')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Confirmation failed')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (step === 'confirm') {
-    return (
-      <AuthLayout title="Verify email">
-        <p className={s.subtext}>Check your email for a verification code.</p>
-        <form onSubmit={handleConfirm}>
-          <div className={s.field}>
-            <label className={s.label}>Verification code</label>
-            <input value={code} onChange={e => setCode(e.target.value)} required className={s.input} />
-          </div>
-          {error && <div className={s.error}>{error}</div>}
-          <button type="submit" disabled={loading} className={s.btn}>{loading ? 'Verifying...' : 'Verify'}</button>
-        </form>
-      </AuthLayout>
-    )
-  }
-
   return (
     <AuthLayout title="Create account">
       <form onSubmit={handleRegister}>
+        <div className={s.field}>
+          <label className={s.label}>Display name</label>
+          <input value={displayName} onChange={e => setDisplayName(e.target.value)} required minLength={1} maxLength={100} className={s.input} />
+        </div>
         <div className={s.field}>
           <label className={s.label}>Email</label>
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className={s.input} />
         </div>
         <div className={s.field}>
           <label className={s.label}>Password</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={12} className={s.input} />
-          <div className={s.hint}>Min 12 chars, uppercase, number, symbol</div>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} className={s.input} />
+          <div className={s.hint}>Min 8 characters</div>
         </div>
         {error && <div className={s.error}>{error}</div>}
         <button type="submit" disabled={loading} className={s.btn}>{loading ? 'Creating...' : 'Create account'}</button>

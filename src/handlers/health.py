@@ -7,7 +7,6 @@ target for automatic DNS failover.
 
 Returns 200 when all checks pass; 503 with a ``degraded`` status when any check fails.
 """
-import time
 
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext
@@ -17,9 +16,6 @@ from src.common.dynamo import get_read_resource
 from src.common.s3 import get_s3_client
 
 logger = Logger(service="image-service")
-
-import os
-_VERSION = os.environ.get("SERVICE_VERSION", "0.1.0")
 
 
 def _check_dynamodb(settings) -> str:
@@ -61,7 +57,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
         "body": json.dumps({
             "status": "healthy" if all_ok else "degraded",
             "checks": checks,
-            "version": _VERSION,
+            "version": settings.service_version,
             "env": settings.env,
         }),
     }

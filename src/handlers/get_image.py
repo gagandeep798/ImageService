@@ -6,10 +6,10 @@ completion see the latest status without waiting for replication.
 from aws_lambda_powertools import Logger, Metrics, Tracer
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
+from src.common import response as resp
 from src.common.config import get_settings
 from src.common.exceptions import ImageServiceError
 from src.common.middleware import get_request_id
-from src.common import response as resp
 from src.repositories import image_repository as img_repo
 
 logger = Logger(service="image-service")
@@ -32,8 +32,7 @@ def handler(event: dict, context: LambdaContext) -> dict:
         image_id = event["pathParameters"]["image_id"]
         image = img_repo.get_by_id(settings, image_id, consistent=True)
 
-        from src.common.models import ImageResponse
-        return resp.ok(ImageResponse(**image.model_dump(exclude={"s3_key", "upload_id"})).model_dump(), request_id)
+        return resp.ok(img_repo.to_response(settings, image).model_dump(), request_id)
 
     except ImageServiceError as exc:
         return resp.error(exc, request_id)

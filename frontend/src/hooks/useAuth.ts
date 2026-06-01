@@ -1,12 +1,11 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { getAuthUser, login, logout, register, confirmRegistration, type AuthUser } from '../lib/auth'
+import { getAuthUser, login, logout, register, type AuthUser } from '../lib/auth'
 
 interface AuthState {
   user: AuthUser | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string) => Promise<string>
-  confirm: (email: string, code: string) => Promise<void>
+  signUp: (email: string, password: string, displayName: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -31,12 +30,9 @@ export function useAuthState(): AuthState {
     setUser(await getAuthUser())
   }, [])
 
-  const signUp = useCallback(async (email: string, password: string) => {
-    return register(email, password)
-  }, [])
-
-  const confirm = useCallback(async (email: string, code: string) => {
-    await confirmRegistration(email, code)
+  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
+    await register(email, password, displayName)
+    setUser(await getAuthUser())
   }, [])
 
   const signOut = useCallback(async () => {
@@ -44,5 +40,5 @@ export function useAuthState(): AuthState {
     setUser(null)
   }, [])
 
-  return { user, loading, signIn, signUp, confirm, signOut }
+  return { user, loading, signIn, signUp, signOut }
 }

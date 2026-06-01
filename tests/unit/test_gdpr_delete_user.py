@@ -15,14 +15,14 @@ pytestmark = pytest.mark.unit
 def _event(user_id: str, caller_id: str) -> dict:
     return {
         "pathParameters": {"user_id": user_id},
-        "requestContext": {"requestId": "req-gdpr", "authorizer": {"jwt": {"claims": {"sub": caller_id}}}},
+        "requestContext": {"requestId": "req-gdpr", "authorizer": {"claims": {"custom:user_id": caller_id}}},
         "queryStringParameters": {},
     }
 
 
 @mock_aws
 def test_self_erasure_marks_user_deleted(dynamodb_tables, mock_settings: Settings):
-    user_repo.create_user(mock_settings, "usr_erase1", "Erase Me", "erase@example.com")
+    user_repo.create_user(mock_settings, "usr_erase1", "Erase Me")
 
     with patch("src.handlers.gdpr_delete_user.get_settings", return_value=mock_settings):
         from src.handlers.gdpr_delete_user import handler
@@ -45,7 +45,7 @@ def test_returns_403_when_wrong_caller(dynamodb_tables, mock_settings: Settings)
 
 @mock_aws
 def test_also_soft_deletes_user_images(dynamodb_tables, mock_settings: Settings):
-    user_repo.create_user(mock_settings, "usr_erase2", "With Images", "wi@example.com")
+    user_repo.create_user(mock_settings, "usr_erase2", "With Images")
     img_repo.create_pending(
         mock_settings, "img_e1", "usr_erase2",
         "originals/usr_erase2/img_e1/f.jpg", "up-1", "image/jpeg", None, None, [],

@@ -8,7 +8,7 @@ Download URLs are signed with CloudFront keys when a key-pair ID is configured;
 otherwise they fall back to plain S3 presigned GET URLs for local development.
 """
 import time
-from typing import Optional
+from datetime import UTC
 
 import boto3
 from aws_lambda_powertools import Logger, Metrics
@@ -20,7 +20,8 @@ from src.common.config import Settings
 logger = Logger(service="image-service")
 metrics = Metrics(namespace="ImageService")
 
-_s3_client: Optional[boto3.client] = None
+_s3_client = None
+_s3_presign_client = None
 
 
 def get_s3_client(settings: Settings) -> boto3.client:
@@ -34,6 +35,23 @@ def get_s3_client(settings: Settings) -> boto3.client:
     return _s3_client
 
 
+def get_s3_presign_client(settings: Settings) -> boto3.client:
+    """Return an S3 client whose endpoint is browser-reachable, used only for presigned URLs.
+
+    In local dev, Lambda reaches LocalStack at the internal Docker hostname but the
+    browser needs localhost:4566. s3_presigned_endpoint_url holds the external address;
+    in prod it is None and boto3 signs against the real AWS endpoint.
+    """
+    global _s3_presign_client
+    if _s3_presign_client is None:
+        kwargs: dict = {"region_name": settings.aws_region}
+        endpoint = settings.s3_presigned_endpoint_url or settings.s3_endpoint_url
+        if endpoint:
+            kwargs["endpoint_url"] = endpoint
+        _s3_presign_client = boto3.client("s3", **kwargs)
+    return _s3_presign_client
+
+
 def create_multipart_upload(client: boto3.client, bucket: str, key: str, content_type: str) -> str:
     """Initiate an S3 multipart upload and return the UploadId."""
     resp = client.create_multipart_upload(
@@ -45,6 +63,18 @@ def create_multipart_upload(client: boto3.client, bucket: str, key: str, content
     return resp["UploadId"]
 
 
+def _rewrite_presigned_host(url: str, presigned_endpoint: str) -> str:
+    """Replace the scheme+host in a presigned URL with the client-accessible endpoint.
+
+    Needed in local dev where Lambda generates URLs using the Docker-internal
+    hostname (image-service-localstack:4566) but browsers hit localhost:4566.
+    """
+    from urllib.parse import urlparse, urlunparse
+    parsed = urlparse(url)
+    target = urlparse(presigned_endpoint)
+    return urlunparse(parsed._replace(scheme=target.scheme, netloc=target.netloc))
+
+
 def generate_upload_part_url(
     client: boto3.client,
     bucket: str,
@@ -52,6 +82,7 @@ def generate_upload_part_url(
     upload_id: str,
     part_number: int,
     ttl: int,
+    presigned_endpoint_url: str | None = None,
 ) -> str:
     """Generate a presigned URL the client uses to PUT a single multipart chunk directly to S3.
 
@@ -59,11 +90,14 @@ def generate_upload_part_url(
     """
     start = time.monotonic()
     try:
-        return client.generate_presigned_url(
+        url = client.generate_presigned_url(
             "upload_part",
             Params={"Bucket": bucket, "Key": key, "UploadId": upload_id, "PartNumber": part_number},
             ExpiresIn=ttl,
         )
+        if presigned_endpoint_url:
+            url = _rewrite_presigned_host(url, presigned_endpoint_url)
+        return url
     finally:
         ms = (time.monotonic() - start) * 1000
         metrics.add_metric(name="s3.presign_latency_ms", unit=MetricUnit.Milliseconds, value=ms)
@@ -108,11 +142,30 @@ def generate_download_url(
     """
     if settings.cloudfront_key_pair_id and settings.cloudfront_key_pair_id != "LOCAL_DEV":
         return _cloudfront_signed_url(settings, s3_key)
-    return client.generate_presigned_url(
+    url = client.generate_presigned_url(
         "get_object",
         Params={"Bucket": settings.originals_bucket, "Key": s3_key},
         ExpiresIn=settings.download_url_ttl_seconds,
     )
+    if settings.s3_presigned_endpoint_url:
+        url = _rewrite_presigned_host(url, settings.s3_presigned_endpoint_url)
+    return url
+
+
+def generate_thumbnail_url(
+    client: boto3.client,
+    settings: Settings,
+    s3_key: str,
+) -> str:
+    """Generate a presigned GET URL for a thumbnail in the thumbnails bucket."""
+    url = client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": settings.thumbnails_bucket, "Key": s3_key},
+        ExpiresIn=settings.download_url_ttl_seconds,
+    )
+    if settings.s3_presigned_endpoint_url:
+        url = _rewrite_presigned_host(url, settings.s3_presigned_endpoint_url)
+    return url
 
 
 def _cloudfront_signed_url(settings: Settings, s3_key: str) -> str:
@@ -122,10 +175,11 @@ def _cloudfront_signed_url(settings: Settings, s3_key: str) -> str:
     The private key is loaded from ``settings.cloudfront_private_key_pem`` which
     was fetched from Secrets Manager at cold-start.
     """
-    from cryptography.hazmat.primitives import hashes, serialization
-    from cryptography.hazmat.primitives.asymmetric import padding
     import base64
     import json
+
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding
 
     expire_time = int(time.time()) + settings.download_url_ttl_seconds
     resource_url = f"https://your-cloudfront-domain/{s3_key}"
@@ -165,7 +219,7 @@ def build_s3_key(user_id: str, image_id: str, filename: str) -> str:
 
     The year/month prefix enables targeted S3 lifecycle rules and inventory.
     """
-    from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
+    from datetime import datetime
+    now = datetime.now(UTC)
     safe_name = sanitize_filename(filename)
     return f"originals/{user_id}/{now.year}/{now.month:02d}/{image_id}/{safe_name}"

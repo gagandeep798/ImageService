@@ -9,10 +9,10 @@ from aws_lambda_powertools import Logger, Metrics, Tracer
 from aws_lambda_powertools.metrics import MetricUnit
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
+from src.common import response as resp
 from src.common.config import get_settings
 from src.common.exceptions import ForbiddenError, ImageServiceError, NotFoundError
 from src.common.middleware import get_caller_user_id, get_request_id, is_admin
-from src.common import response as resp
 from src.repositories import image_repository as img_repo
 
 logger = Logger(service="image-service")

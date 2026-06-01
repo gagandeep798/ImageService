@@ -20,7 +20,6 @@ TEST_SETTINGS = Settings(
     images_table_name="test-images",
     users_table_name="test-users",
     migrations_table_name="test-migrations",
-    secret_hashes_table_name="test-secret-hashes",
     dynamodb_endpoint_url=None,
     aws_region="us-east-1",
     originals_bucket="test-originals",
@@ -28,6 +27,7 @@ TEST_SETTINGS = Settings(
     quarantine_bucket="test-quarantine",
     logs_bucket="test-logs",
     s3_endpoint_url=None,
+    s3_presigned_endpoint_url=None,
     max_image_size_bytes=20 * 1024 * 1024,
     chunk_size_bytes=5 * 1024 * 1024,
     upload_url_ttl_seconds=900,
@@ -40,7 +40,13 @@ TEST_SETTINGS = Settings(
     cloudfront_private_key_pem="LOCAL_DEV_NO_CLOUDFRONT",
     cloudfront_key_pair_id="LOCAL_DEV",
     slack_webhook_url="",
+    scan_complete_function_arn="arn:aws:lambda:us-east-1:123456789012:function:test-scan-complete",
+    generate_thumbnails_function_arn="arn:aws:lambda:us-east-1:123456789012:function:test-generate-thumbnails",
+    cognito_user_pool_id="us-east-1_testpool",
+    cognito_client_id="testclientid",
+    cognito_endpoint_url=None,
     env="test",
+    service_version="0.1.0",
 )
 
 
@@ -106,18 +112,12 @@ def dynamodb_tables(mock_settings: Settings):
             AttributeDefinitions=[
                 {"AttributeName": "PK", "AttributeType": "S"},
                 {"AttributeName": "SK", "AttributeType": "S"},
-                {"AttributeName": "EmailHashIndex_PK", "AttributeType": "S"},
             ],
             KeySchema=[
                 {"AttributeName": "PK", "KeyType": "HASH"},
                 {"AttributeName": "SK", "KeyType": "RANGE"},
             ],
             BillingMode="PAY_PER_REQUEST",
-            GlobalSecondaryIndexes=[{
-                "IndexName": "EmailHashIndex",
-                "KeySchema": [{"AttributeName": "EmailHashIndex_PK", "KeyType": "HASH"}],
-                "Projection": {"ProjectionType": "KEYS_ONLY"},
-            }],
         )
 
         yield boto3.resource("dynamodb", region_name=mock_settings.aws_region)

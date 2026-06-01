@@ -15,13 +15,41 @@ Parameters:
   ServiceVersion:
     Type: String
     Default: "0.1.0"
+  CognitoUserPoolId:
+    Type: String
+    Default: ""
+  CognitoClientId:
+    Type: String
+    Default: ""
+  CognitoEndpointUrl:
+    Type: String
+    Default: ""
+  PiiPepper:
+    Type: String
+    NoEcho: true
+    Default: ""
+  SlackWebhookUrl:
+    Type: String
+    Default: ""
+  CloudFrontKeyPairId:
+    Type: String
+    Default: ""
+  CloudFrontPrivateKeyB64:
+    Type: String
+    Default: ""
+  AwsEndpointUrl:
+    Type: String
+    Default: ""
+  S3PresignedEndpointUrl:
+    Type: String
+    Default: ""
 
 Globals:
   Function:
     Runtime: python3.12
     MemorySize: 512
     Timeout: 30
-    Architectures: [x86_64]
+    Architectures: [arm64]
     Tracing: Active
     Environment:
       Variables:
@@ -31,26 +59,33 @@ Globals:
         AWS_DEFAULT_REGION: !Ref AWS::Region
         POWERTOOLS_SERVICE_NAME: image-service
         POWERTOOLS_LOG_LEVEL: !Ref LogLevel
-        IMAGES_TABLE_NAME: !Ref ImagesTable
-        USERS_TABLE_NAME: !Ref UsersTable
-        MIGRATIONS_TABLE_NAME: !Ref MigrationsTable
-        SECRET_HASHES_TABLE_NAME: !Ref SecretHashesTable
+        IMAGES_TABLE_NAME: !If [IsLocal, "image-service-images", !Ref ImagesTable]
+        USERS_TABLE_NAME: !If [IsLocal, "image-service-users", !Ref UsersTable]
+        MIGRATIONS_TABLE_NAME: !If [IsLocal, "image-service-migrations", !Ref MigrationsTable]
         ORIGINALS_BUCKET: !Ref OriginalsBucket
         THUMBNAILS_BUCKET: !Ref ThumbnailsBucket
         QUARANTINE_BUCKET: !Ref QuarantineBucket
         LOGS_BUCKET: !Ref LogsBucket
-        FINALIZE_QUEUE_URL: !Ref FinalizeQueue
-        SCAN_QUEUE_URL: !Ref ScanQueue
-        THUMBNAIL_QUEUE_URL: !Ref ThumbnailQueue
         DYNAMO_GSI2_SHARD_COUNT: "8"
         MAX_IMAGE_SIZE_BYTES: "20971520"
         CHUNK_SIZE_BYTES: "5242880"
         UPLOAD_URL_TTL_SECONDS: "900"
         DOWNLOAD_URL_TTL_SECONDS: "3600"
+        DYNAMO_DELETE_ROLE_ARN: !If [IsNotLocal, !GetAtt DynamoDBDeleteRole.Arn, ""]
+        COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+        COGNITO_CLIENT_ID: !Ref CognitoClientId
+        COGNITO_ENDPOINT_URL: !Ref CognitoEndpointUrl
+        PII_PEPPER: !Ref PiiPepper
+        SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+        CLOUDFRONT_KEY_PAIR_ID: !Ref CloudFrontKeyPairId
+        CLOUDFRONT_PRIVATE_KEY_B64: !Ref CloudFrontPrivateKeyB64
+        AWS_ENDPOINT_URL: !Ref AwsEndpointUrl
+        S3_PRESIGNED_ENDPOINT_URL: !Ref S3PresignedEndpointUrl
 
 # ── Conditions ────────────────────────────────────────────────────────────────
 Conditions:
   IsProd: !Equals [!Ref Env, prod]
+  IsLocal: !Equals [!Ref Env, local]
   IsNotLocal: !Not [!Equals [!Ref Env, local]]
 
 Resources:
@@ -59,8 +94,9 @@ Resources:
 
   ImagesTable:
     Type: AWS::DynamoDB::Table
+    Condition: IsNotLocal
     Properties:
-      TableName: !Sub "image-service-images-${Env}"
+      TableName: image-service-images
       BillingMode: PAY_PER_REQUEST
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
@@ -95,23 +131,18 @@ Resources:
 
   UsersTable:
     Type: AWS::DynamoDB::Table
+    Condition: IsNotLocal
     Properties:
-      TableName: !Sub "image-service-users-${Env}"
+      TableName: image-service-users
       BillingMode: PAY_PER_REQUEST
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       AttributeDefinitions:
         - {AttributeName: PK, AttributeType: S}
         - {AttributeName: SK, AttributeType: S}
-        - {AttributeName: EmailHashIndex_PK, AttributeType: S}
       KeySchema:
         - {AttributeName: PK, KeyType: HASH}
         - {AttributeName: SK, KeyType: RANGE}
-      GlobalSecondaryIndexes:
-        - IndexName: EmailHashIndex
-          KeySchema:
-            - {AttributeName: EmailHashIndex_PK, KeyType: HASH}
-          Projection: {ProjectionType: KEYS_ONLY}
       TimeToLiveSpecification:
         AttributeName: ttl
         Enabled: true
@@ -120,8 +151,9 @@ Resources:
 
   MigrationsTable:
     Type: AWS::DynamoDB::Table
+    Condition: IsNotLocal
     Properties:
-      TableName: !Sub "image-service-migrations-${Env}"
+      TableName: image-service-migrations
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - {AttributeName: PK, AttributeType: S}
@@ -129,21 +161,6 @@ Resources:
       KeySchema:
         - {AttributeName: PK, KeyType: HASH}
         - {AttributeName: SK, KeyType: RANGE}
-
-  SecretHashesTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: !Sub "image-service-secret-hashes-${Env}"
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - {AttributeName: PK, AttributeType: S}
-        - {AttributeName: SK, AttributeType: S}
-      KeySchema:
-        - {AttributeName: PK, KeyType: HASH}
-        - {AttributeName: SK, KeyType: RANGE}
-      TimeToLiveSpecification:
-        AttributeName: ttl
-        Enabled: true
 
   # ── S3 Buckets ───────────────────────────────────────────────────────────────
 
@@ -169,15 +186,6 @@ Resources:
             AllowedOrigins: ["*"]
             ExposedHeaders: [ETag]
             MaxAge: 3600
-      NotificationConfiguration:
-        QueueConfigurations:
-          - Event: s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: prefix
-                    Value: originals/
-            Queue: !GetAtt FinalizeQueue.Arn
       LifecycleConfiguration:
         Rules:
           - Id: transition-to-ia
@@ -313,7 +321,7 @@ Resources:
         PriceClass: PriceClass_100
         Origins:
           - Id: FrontendS3Origin
-            DomainName: !Sub "${FrontendBucket}.s3.${AWS::Region}.amazonaws.com"
+            DomainName: !GetAtt FrontendBucket.RegionalDomainName
             OriginAccessControlId: !Ref FrontendOAC
             S3OriginConfig:
               OriginAccessIdentity: ""
@@ -352,62 +360,6 @@ Resources:
           Prefix: logs/cloudfront/
           IncludeCookies: false
 
-  # ── SQS Queues ───────────────────────────────────────────────────────────────
-
-  FinalizeDLQ:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "image-service-finalize-dlq-${Env}"
-      MessageRetentionPeriod: 1209600  # 14 days
-
-  FinalizeQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "image-service-finalize-${Env}"
-      VisibilityTimeout: 60
-      MessageRetentionPeriod: 86400
-      RedrivePolicy:
-        deadLetterTargetArn: !GetAtt FinalizeDLQ.Arn
-        maxReceiveCount: 3
-
-  ScanDLQ:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "image-service-scan-dlq-${Env}"
-
-  ScanQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "image-service-scan-${Env}"
-      VisibilityTimeout: 120
-      MessageRetentionPeriod: 86400
-      RedrivePolicy:
-        deadLetterTargetArn: !GetAtt ScanDLQ.Arn
-        maxReceiveCount: 3
-
-  ThumbnailQueue:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: !Sub "image-service-thumbnails-${Env}"
-      VisibilityTimeout: 120
-      MessageRetentionPeriod: 86400
-
-  # SQS policy to allow S3 to send messages
-  FinalizeQueuePolicy:
-    Type: AWS::SQS::QueuePolicy
-    Properties:
-      Queues: [!Ref FinalizeQueue]
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: s3.amazonaws.com
-            Action: sqs:SendMessage
-            Resource: !GetAtt FinalizeQueue.Arn
-            Condition:
-              ArnLike:
-                aws:SourceArn: !Sub "arn:aws:s3:::image-service-originals-${AWS::AccountId}-${AWS::Region}-${Env}"
-
   # ── DynamoDB Access-Tier IAM Roles ───────────────────────────────────────────
   # Three separate IAM roles enforce least-privilege at the AWS level.
   # Each Lambda function assumes only the role(s) it needs.
@@ -416,6 +368,7 @@ Resources:
 
   DynamoDBReadRole:
     Type: AWS::IAM::Role
+    Condition: IsNotLocal
     Properties:
       RoleName: !Sub "image-service-dynamo-read-${Env}"
       AssumeRolePolicyDocument:
@@ -445,6 +398,7 @@ Resources:
 
   DynamoDBWriteRole:
     Type: AWS::IAM::Role
+    Condition: IsNotLocal
     Properties:
       RoleName: !Sub "image-service-dynamo-write-${Env}"
       AssumeRolePolicyDocument:
@@ -474,6 +428,7 @@ Resources:
 
   DynamoDBDeleteRole:
     Type: AWS::IAM::Role
+    Condition: IsNotLocal
     Properties:
       RoleName: !Sub "image-service-dynamo-delete-${Env}"
       AssumeRolePolicyDocument:
@@ -513,8 +468,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-upload-initiate-${Env}"
-      CodeUri: src/
-      Handler: handlers.upload_initiate.handler
+      CodeUri: .
+      Handler: src.handlers.upload_initiate.handler
       ReservedConcurrentExecutions: 50
       Events:
         Api:
@@ -525,23 +480,20 @@ Resources:
             Method: POST
       Policies:
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref UsersTable
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
         - Statement:
             - Effect: Allow
               Action: [s3:CreateMultipartUpload]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   UploadPartFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-upload-part-${Env}"
-      CodeUri: src/
-      Handler: handlers.upload_part.handler
+      CodeUri: .
+      Handler: src.handlers.upload_part.handler
       Events:
         Api:
           Type: Api
@@ -551,23 +503,20 @@ Resources:
             Method: POST
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - Statement:
             - Effect: Allow
               Action: [s3:UploadPart]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   UploadCompleteFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-upload-complete-${Env}"
-      CodeUri: src/
-      Handler: handlers.upload_complete.handler
+      CodeUri: .
+      Handler: src.handlers.upload_complete.handler
       Events:
         Api:
           Type: Api
@@ -577,23 +526,20 @@ Resources:
             Method: POST
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - Statement:
             - Effect: Allow
               Action: [s3:CompleteMultipartUpload]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   UploadAbortFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-upload-abort-${Env}"
-      CodeUri: src/
-      Handler: handlers.upload_abort.handler
+      CodeUri: .
+      Handler: src.handlers.upload_abort.handler
       Events:
         Api:
           Type: Api
@@ -603,69 +549,55 @@ Resources:
             Method: DELETE
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref UsersTable
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
         - Statement:
             - Effect: Allow
               Action: [s3:AbortMultipartUpload]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   FinalizeUploadFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-finalize-upload-${Env}"
-      CodeUri: src/
-      Handler: handlers.finalize_upload.handler
+      CodeUri: .
+      Handler: src.handlers.finalize_upload.handler
       MemorySize: 1024
       Timeout: 60
       ReservedConcurrentExecutions: 100
-      Events:
-        SQSTrigger:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt FinalizeQueue.Arn
-            BatchSize: 5
-            FunctionResponseTypes: [ReportBatchItemFailures]
+      Environment:
+        Variables:
+          SCAN_COMPLETE_FUNCTION_ARN: !GetAtt ScanCompleteFunction.Arn
       Policies:
-        - SQSPollerPolicy:
-            QueueName: !GetAtt FinalizeQueue.QueueName
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref UsersTable
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
         - Statement:
             - Effect: Allow
               Action: [s3:GetObject, s3:HeadObject]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
             - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+              Action: lambda:InvokeFunction
+              Resource: !GetAtt ScanCompleteFunction.Arn
 
   ScanCompleteFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-scan-complete-${Env}"
-      CodeUri: src/
-      Handler: handlers.scan_complete.handler
-      Events:
-        SQSTrigger:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt ScanQueue.Arn
-            BatchSize: 10
+      CodeUri: .
+      Handler: src.handlers.scan_complete.handler
+      Environment:
+        Variables:
+          GENERATE_THUMBNAILS_FUNCTION_ARN: !GetAtt GenerateThumbnailsFunction.Arn
       Policies:
-        - SQSPollerPolicy:
-            QueueName: !GetAtt ScanQueue.QueueName
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - Statement:
             - Effect: Allow
               Action: [s3:CopyObject, s3:DeleteObject]
@@ -673,30 +605,22 @@ Resources:
                 - !Sub "${OriginalsBucket.Arn}/*"
                 - !Sub "${QuarantineBucket.Arn}/*"
             - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+              Action: lambda:InvokeFunction
+              Resource: !GetAtt GenerateThumbnailsFunction.Arn
 
   GenerateThumbnailsFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-generate-thumbnails-${Env}"
-      CodeUri: src/
-      Handler: handlers.generate_thumbnails.handler
+      CodeUri: .
+      Handler: src.handlers.generate_thumbnails.handler
       MemorySize: 1024
       Timeout: 120
-      Events:
-        SQSTrigger:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt ThumbnailQueue.Arn
-            BatchSize: 5
       Policies:
-        - SQSPollerPolicy:
-            QueueName: !GetAtt ThumbnailQueue.QueueName
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - DynamoDBWritePolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - Statement:
             - Effect: Allow
               Action: [s3:GetObject]
@@ -704,16 +628,13 @@ Resources:
             - Effect: Allow
               Action: [s3:PutObject]
               Resource: !Sub "${ThumbnailsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   GetImageFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-get-image-${Env}"
-      CodeUri: src/
-      Handler: handlers.get_image.handler
+      CodeUri: .
+      Handler: src.handlers.get_image.handler
       Events:
         Api:
           Type: Api
@@ -723,18 +644,13 @@ Resources:
             Method: GET
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
-        - Statement:
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
-
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
   ListImagesFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-list-images-${Env}"
-      CodeUri: src/
-      Handler: handlers.list_images.handler
+      CodeUri: .
+      Handler: src.handlers.list_images.handler
       Events:
         Api:
           Type: Api
@@ -744,18 +660,13 @@ Resources:
             Method: GET
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
-        - Statement:
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
-
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
   DeleteImageFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-delete-image-${Env}"
-      CodeUri: src/
-      Handler: handlers.delete_image.handler
+      CodeUri: .
+      Handler: src.handlers.delete_image.handler
       Events:
         Api:
           Type: Api
@@ -766,22 +677,19 @@ Resources:
       Policies:
         # Read: to fetch the image record and verify ownership
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         # Delete: STS assume-role to get the delete-tier resource
         - Statement:
             - Effect: Allow
               Action: sts:AssumeRole
-              Resource: !GetAtt DynamoDBDeleteRole.Arn
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+              Resource: !If [IsNotLocal, !GetAtt DynamoDBDeleteRole.Arn, "*"]
 
   DownloadFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-download-${Env}"
-      CodeUri: src/
-      Handler: handlers.download.handler
+      CodeUri: .
+      Handler: src.handlers.download.handler
       Events:
         Api:
           Type: Api
@@ -791,21 +699,18 @@ Resources:
             Method: GET
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - Statement:
             - Effect: Allow
               Action: [s3:GetObject]
               Resource: !Sub "${OriginalsBucket.Arn}/*"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   HealthFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-health-${Env}"
-      CodeUri: src/
-      Handler: handlers.health.handler
+      CodeUri: .
+      Handler: src.handlers.health.handler
       Events:
         Api:
           Type: Api
@@ -817,21 +722,18 @@ Resources:
               Authorizer: NONE
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         - Statement:
             - Effect: Allow
               Action: [s3:HeadBucket]
               Resource: !Sub "${OriginalsBucket.Arn}"
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
   GdprDeleteUserFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-gdpr-delete-user-${Env}"
-      CodeUri: src/
-      Handler: handlers.gdpr_delete_user.handler
+      CodeUri: .
+      Handler: src.handlers.gdpr_delete_user.handler
       Timeout: 300
       Events:
         Api:
@@ -843,64 +745,76 @@ Resources:
       Policies:
         # Read: paginate the user's images via UserImagesIndex
         - DynamoDBReadPolicy:
-            TableName: !Ref ImagesTable
+            TableName: !If [IsLocal, "image-service-images", !Ref ImagesTable]
         # Delete: STS assume-role for both tables (images + users)
         - Statement:
             - Effect: Allow
               Action: sts:AssumeRole
-              Resource: !GetAtt DynamoDBDeleteRole.Arn
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+              Resource: !If [IsNotLocal, !GetAtt DynamoDBDeleteRole.Arn, "*"]
 
   SlackNotifierFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-slack-notifier-${Env}"
-      CodeUri: src/
-      Handler: handlers.slack_notifier.handler
+      CodeUri: .
+      Handler: src.handlers.slack_notifier.handler
       Events:
         SNSTrigger:
           Type: SNS
           Properties:
             Topic: !Ref AlertsTopic
-      Policies:
-        - Statement:
-            - Effect: Allow
-              Action: [secretsmanager:GetSecretValue]
-              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/alerts"
 
   ScaleLambdaFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "image-service-scale-lambda-${Env}"
-      CodeUri: src/
-      Handler: handlers.scale_lambda.handler
+      CodeUri: .
+      Handler: src.handlers.scale_lambda.handler
       Policies:
         - Statement:
             - Effect: Allow
               Action: [lambda:GetFunctionConcurrency, lambda:PutFunctionConcurrency]
               Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:image-service-*"
 
-  BackupSecretsFunction:
-    Type: AWS::Serverless::Function
+  # ── Cognito (staging/prod only — local uses jagregory/cognito-local) ─────────
+
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Condition: IsNotLocal
     Properties:
-      FunctionName: !Sub "image-service-backup-secrets-${Env}"
-      CodeUri: src/
-      Handler: handlers.backup_secrets.handler
-      Timeout: 120
-      Events:
-        DailySchedule:
-          Type: Schedule
-          Properties:
-            Schedule: cron(0 2 * * ? *)  # 02:00 UTC daily
+      UserPoolName: !Sub "image-service-users-${Env}"
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      Schema:
+        - Name: user_id
+          AttributeDataType: String
+          Mutable: false
+          Required: false
       Policies:
-        - DynamoDBWritePolicy:
-            TableName: !Ref SecretHashesTable
-        - Statement:
-            - Effect: Allow
-              Action: [secretsmanager:ListSecrets, secretsmanager:GetSecretValue]
-              Resource: "*"
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Condition: IsNotLocal
+    Properties:
+      ClientName: !Sub "image-service-client-${Env}"
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+      AccessTokenValidity: 1
+      IdTokenValidity: 1
+      RefreshTokenValidity: 30
+      TokenValidityUnits:
+        AccessToken: hours
+        IdToken: hours
+        RefreshToken: days
 
   # ── API Gateway ───────────────────────────────────────────────────────────────
 
@@ -914,9 +828,10 @@ Resources:
         DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
           CognitoAuthorizer:
-            UserPoolArn: !GetAtt CognitoUserPool.Arn
-            Identity:
-              Header: Authorization
+            UserPoolArn: !If
+              - IsNotLocal
+              - !GetAtt CognitoUserPool.Arn
+              - !Sub "arn:aws:cognito-idp:${AWS::Region}:000000000000:userpool/${CognitoUserPoolId}"
       MethodSettings:
         - ResourcePath: "/*"
           HttpMethod: "*"
@@ -929,43 +844,65 @@ Resources:
         DestinationArn: !GetAtt ApiGatewayLogGroup.Arn
         Format: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength","integrationLatency":"$context.integrationLatency"}'
 
-  # ── Cognito ───────────────────────────────────────────────────────────────────
+  # ── Auth Lambda Functions ─────────────────────────────────────────────────────
 
-  CognitoUserPool:
-    Type: AWS::Cognito::UserPool
+  AuthSignupFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      UserPoolName: !Sub "image-service-${Env}"
-      AutoVerifiedAttributes: [email]
-      UsernameAttributes: [email]
+      FunctionName: !Sub "image-service-auth-signup-${Env}"
+      CodeUri: .
+      Handler: src.handlers.auth_signup.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /auth/signup
+            Method: POST
+            Auth:
+              Authorizer: NONE
       Policies:
-        PasswordPolicy:
-          MinimumLength: 12
-          RequireUppercase: true
-          RequireLowercase: true
-          RequireNumbers: true
-          RequireSymbols: true
+        - DynamoDBWritePolicy:
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
+        - DynamoDBReadPolicy:
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
 
-  CognitoUserPoolClient:
-    Type: AWS::Cognito::UserPoolClient
-    DependsOn: CloudFrontDistribution
+  AuthLoginFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      ClientName: image-service-app
-      UserPoolId: !Ref CognitoUserPool
-      GenerateSecret: false
-      ExplicitAuthFlows:
-        - ALLOW_USER_SRP_AUTH
-        - ALLOW_REFRESH_TOKEN_AUTH
-      TokenValidityUnits:
-        AccessToken: hours
-        RefreshToken: days
-      AccessTokenValidity: 1
-      RefreshTokenValidity: 30
-      CallbackURLs:
-        - http://localhost:5173/callback
-        - !Sub "https://${CloudFrontDistribution.DomainName}/callback"
-      LogoutURLs:
-        - http://localhost:5173/
-        - !Sub "https://${CloudFrontDistribution.DomainName}/"
+      FunctionName: !Sub "image-service-auth-login-${Env}"
+      CodeUri: .
+      Handler: src.handlers.auth_login.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /auth/login
+            Method: POST
+            Auth:
+              Authorizer: NONE
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
+        - DynamoDBWritePolicy:
+            TableName: !If [IsLocal, "image-service-users", !Ref UsersTable]
+
+  AuthRefreshFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-auth-refresh-${Env}"
+      CodeUri: .
+      Handler: src.handlers.auth_refresh.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /auth/refresh
+            Method: POST
+            Auth:
+              Authorizer: NONE
 
   # ── CloudWatch Log Groups ─────────────────────────────────────────────────────
 
@@ -1010,21 +947,13 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       AlarmActions: [!Ref AlertsTopic]
 
-  FinalizeDLQAlarm:
-    Type: AWS::CloudWatch::Alarm
+  FinalizeUploadS3Permission:
+    Type: AWS::Lambda::Permission
     Properties:
-      AlarmName: !Sub "image-service-FinalizeDLQ-${Env}"
-      MetricName: ApproximateNumberOfMessagesVisible
-      Namespace: AWS/SQS
-      Dimensions:
-        - Name: QueueName
-          Value: !GetAtt FinalizeDLQ.QueueName
-      Statistic: Sum
-      Period: 60
-      EvaluationPeriods: 1
-      Threshold: 0
-      ComparisonOperator: GreaterThanThreshold
-      AlarmActions: [!Ref AlertsTopic]
+      FunctionName: !GetAtt FinalizeUploadFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt OriginalsBucket.Arn
 
   ScanThreatAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -1034,19 +963,6 @@ Resources:
       Namespace: ImageService
       Statistic: Sum
       Period: 60
-      EvaluationPeriods: 1
-      Threshold: 0
-      ComparisonOperator: GreaterThanThreshold
-      AlarmActions: [!Ref AlertsTopic]
-
-  SecretUnexpectedChangeAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub "image-service-secrets-unexpected-change-${Env}"
-      MetricName: secrets.unexpected_change
-      Namespace: ImageService
-      Statistic: Sum
-      Period: 3600
       EvaluationPeriods: 1
       Threshold: 0
       ComparisonOperator: GreaterThanThreshold
@@ -1106,19 +1022,16 @@ Outputs:
     Value: !Sub "https://${ImageApi}.execute-api.${AWS::Region}.amazonaws.com/v1"
 
   ImagesTableName:
-    Value: !Ref ImagesTable
+    Value: !If [IsLocal, "image-service-images", !Ref ImagesTable]
 
   UsersTableName:
-    Value: !Ref UsersTable
+    Value: !If [IsLocal, "image-service-users", !Ref UsersTable]
+
+  MigrationsTableName:
+    Value: !If [IsLocal, "image-service-migrations", !Ref MigrationsTable]
 
   OriginalsBucketName:
     Value: !Ref OriginalsBucket
-
-  CognitoUserPoolId:
-    Value: !Ref CognitoUserPool
-
-  CognitoAppClientId:
-    Value: !Ref CognitoUserPoolClient
 
   FrontendBucketName:
     Value: !Ref FrontendBucket

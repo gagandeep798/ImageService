@@ -1,0 +1,21 @@
+{
+  "Clients": {
+    "imageserviceclient1": {
+      "ClientId": "imageserviceclient1",
+      "ClientName": "image-service-client",
+      "CreationDate": "2026-01-01T00:00:00.000Z",
+      "ExplicitAuthFlows": [
+        "ALLOW_USER_PASSWORD_AUTH",
+        "ALLOW_REFRESH_TOKEN_AUTH",
+        "ALLOW_USER_SRP_AUTH"
+      ],
+      "LastModifiedDate": "2026-01-01T00:00:00.000Z",
+      "TokenValidityUnits": {
+        "AccessToken": "hours",
+        "IdToken": "minutes",
+        "RefreshToken": "days"
+      },
+      "UserPoolId": "local_ImageService"
+    }
+  }
+}

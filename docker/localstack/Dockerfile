@@ -1,1 +1,1 @@
-FROM localstack/localstack:3.4
+FROM localstack/localstack:stable

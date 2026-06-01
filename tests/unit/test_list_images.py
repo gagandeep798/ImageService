@@ -14,13 +14,22 @@ pytestmark = pytest.mark.unit
 def _event(qs: dict = None) -> dict:
     return {
         "pathParameters": {},
-        "requestContext": {"requestId": "req-list", "authorizer": {"jwt": {"claims": {"sub": "usr_abc"}}}},
+        "requestContext": {
+            "requestId": "req-list",
+            "authorizer": {"claims": {"custom:user_id": "usr_abc"}},
+        },
         "queryStringParameters": qs or {},
     }
 
 
+def _admin_event(qs: dict = None) -> dict:
+    event = _event(qs)
+    event["requestContext"]["authorizer"]["claims"]["cognito:groups"] = "admins"
+    return event
+
+
 @mock_aws
-def test_lists_active_images_for_user(dynamodb_tables, mock_settings: Settings):
+def test_lists_active_images_for_user(dynamodb_tables: object, mock_settings: Settings) -> None:
     for i in range(3):
         img_repo.create_pending(
             mock_settings, f"img_list{i}", "usr_list",
@@ -30,7 +39,9 @@ def test_lists_active_images_for_user(dynamodb_tables, mock_settings: Settings):
 
     with patch("src.handlers.list_images.get_settings", return_value=mock_settings):
         from src.handlers.list_images import handler
-        resp = handler(_event({"user_id": "usr_list", "limit": "10"}), MagicMock())
+        event = _event({"user_id": "usr_list", "limit": "10"})
+        event["requestContext"]["authorizer"]["claims"]["custom:user_id"] = "usr_list"
+        resp = handler(event, MagicMock())
 
     assert resp["statusCode"] == 200
     data = json.loads(resp["body"])["data"]
@@ -39,7 +50,48 @@ def test_lists_active_images_for_user(dynamodb_tables, mock_settings: Settings):
 
 
 @mock_aws
-def test_respects_limit_parameter(dynamodb_tables, mock_settings: Settings):
+def test_defaults_to_logged_in_user(dynamodb_tables: object, mock_settings: Settings) -> None:
+    for user_id in ("usr_abc", "usr_other"):
+        img_repo.create_pending(
+            mock_settings, f"img_{user_id}", user_id,
+            f"originals/{user_id}/f.jpg", f"up-{user_id}", "image/jpeg", None, None, [],
+        )
+        img_repo.set_status(mock_settings, f"img_{user_id}", "ACTIVE")
+
+    with patch("src.handlers.list_images.get_settings", return_value=mock_settings):
+        from src.handlers.list_images import handler
+        resp = handler(_event({"limit": "20"}), MagicMock())
+
+    assert resp["statusCode"] == 200
+    data = json.loads(resp["body"])["data"]
+    assert data["count"] == 1
+    assert data["items"][0]["user_id"] == "usr_abc"
+
+
+@mock_aws
+def test_admin_without_user_id_still_defaults_to_logged_in_user(
+    dynamodb_tables: object,
+    mock_settings: Settings,
+) -> None:
+    for user_id in ("usr_abc", "usr_other"):
+        img_repo.create_pending(
+            mock_settings, f"img_admin_{user_id}", user_id,
+            f"originals/{user_id}/admin-f.jpg", f"up-admin-{user_id}", "image/jpeg", None, None, [],
+        )
+        img_repo.set_status(mock_settings, f"img_admin_{user_id}", "ACTIVE")
+
+    with patch("src.handlers.list_images.get_settings", return_value=mock_settings):
+        from src.handlers.list_images import handler
+        resp = handler(_admin_event({"limit": "20"}), MagicMock())
+
+    assert resp["statusCode"] == 200
+    data = json.loads(resp["body"])["data"]
+    assert data["count"] == 1
+    assert data["items"][0]["user_id"] == "usr_abc"
+
+
+@mock_aws
+def test_respects_limit_parameter(dynamodb_tables: object, mock_settings: Settings) -> None:
     for i in range(5):
         img_repo.create_pending(
             mock_settings, f"img_lim{i}", "usr_lim",
@@ -49,17 +101,24 @@ def test_respects_limit_parameter(dynamodb_tables, mock_settings: Settings):
 
     with patch("src.handlers.list_images.get_settings", return_value=mock_settings):
         from src.handlers.list_images import handler
-        resp = handler(_event({"user_id": "usr_lim", "limit": "2"}), MagicMock())
+        event = _event({"user_id": "usr_lim", "limit": "2"})
+        event["requestContext"]["authorizer"]["claims"]["custom:user_id"] = "usr_lim"
+        resp = handler(event, MagicMock())
 
     data = json.loads(resp["body"])["data"]
     assert data["count"] == 2
 
 
 @mock_aws
-def test_returns_empty_list_for_unknown_user(dynamodb_tables, mock_settings: Settings):
+def test_returns_empty_list_for_unknown_user(
+    dynamodb_tables: object,
+    mock_settings: Settings,
+) -> None:
     with patch("src.handlers.list_images.get_settings", return_value=mock_settings):
         from src.handlers.list_images import handler
-        resp = handler(_event({"user_id": "usr_nobody"}), MagicMock())
+        event = _event({"user_id": "usr_nobody"})
+        event["requestContext"]["authorizer"]["claims"]["custom:user_id"] = "usr_nobody"
+        resp = handler(event, MagicMock())
 
     assert resp["statusCode"] == 200
     assert json.loads(resp["body"])["data"]["count"] == 0

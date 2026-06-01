@@ -19,8 +19,8 @@ MD5 of the image ULID, preventing hot-partition throttling.
 """
 import hashlib
 import time
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator, Optional
 
 import boto3
 from aws_lambda_powertools import Logger, Metrics
@@ -34,9 +34,9 @@ logger = Logger(service="image-service")
 metrics = Metrics(namespace="ImageService")
 
 # Module-level singletons — one per access tier, reused across warm invocations
-_read_resource: Optional[ServiceResource] = None
-_write_resource: Optional[ServiceResource] = None
-_delete_resource: Optional[ServiceResource] = None
+_read_resource: ServiceResource | None = None
+_write_resource: ServiceResource | None = None
+_delete_resource: ServiceResource | None = None
 
 
 def _assume_role(role_arn: str, session_name: str, region: str) -> dict:
@@ -52,7 +52,7 @@ def _assume_role(role_arn: str, session_name: str, region: str) -> dict:
 
 def _build_resource(
     settings: Settings,
-    role_arn: Optional[str] = None,
+    role_arn: str | None = None,
     session_name: str = "image-service",
 ) -> ServiceResource:
     """Instantiate a DynamoDB resource, optionally using STS-assumed credentials.

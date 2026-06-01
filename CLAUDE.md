@@ -8,12 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Setup
 make install          # install Python deps (Poetry)
 cp docker/.env.sample docker/.env   # required before first run
-cp .env.local.template .env.local   # fill in local credentials
+cp .env.template .env               # fill in credentials and local overrides
 
 # Local stack
 make localstack-up    # build image + start LocalStack (blocks until healthy + init scripts run)
 make localstack-down  # stop and remove volumes
-make seed             # seed DynamoDB + S3 with test data
 
 # SAM local API (after localstack-up)
 make start-api        # SAM on http://localhost:3000 — pass ?_dev_user_id=<uid> instead of JWT

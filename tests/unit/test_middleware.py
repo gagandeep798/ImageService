@@ -1,23 +1,28 @@
-"""Unit tests for JWT claims middleware helpers."""
+"""Unit tests for middleware helpers."""
 import pytest
 
-from src.common.exceptions import ForbiddenError
 from src.common import middleware
+from src.common.exceptions import ForbiddenError
 
 pytestmark = pytest.mark.unit
 
 
-def _event(sub: str = "usr_abc", groups: str = "") -> dict:
+def _event(user_id: str = "usr_abc", is_admin: bool = False) -> dict:
     return {
         "requestContext": {
             "requestId": "req-123",
-            "authorizer": {"jwt": {"claims": {"sub": sub, "cognito:groups": groups}}},
+            "authorizer": {
+                "claims": {
+                    "custom:user_id": user_id,
+                    "cognito:groups": "admins" if is_admin else "",
+                }
+            },
         },
         "queryStringParameters": {},
     }
 
 
-def test_get_caller_user_id_returns_sub():
+def test_get_caller_user_id_returns_user_id():
     assert middleware.get_caller_user_id(_event("usr_xyz")) == "usr_xyz"
 
 
@@ -35,23 +40,25 @@ def test_dev_bypass_via_query_param():
     assert middleware.get_caller_user_id(event) == "usr_dev"
 
 
-def test_get_caller_groups_parses_cognito_groups():
-    groups = middleware.get_caller_groups(_event(groups="[admin,editor]"))
-    assert "admin" in groups
-    assert "editor" in groups
+def test_jwt_bearer_fallback():
+    # Minimal JWT with custom:user_id in payload (no signature check)
+    import base64, json
+    payload = base64.b64encode(json.dumps({"custom:user_id": "usr_jwt"}).encode()).decode().rstrip("=")
+    token = f"header.{payload}.sig"
+    event = {
+        "requestContext": {},
+        "queryStringParameters": {},
+        "headers": {"Authorization": f"Bearer {token}"},
+    }
+    assert middleware.get_caller_user_id(event) == "usr_jwt"
 
 
-def test_get_caller_groups_empty_when_no_claim():
-    groups = middleware.get_caller_groups(_event(groups=""))
-    assert groups == []
+def test_is_admin_returns_true():
+    assert middleware.is_admin(_event(is_admin=True)) is True
 
 
-def test_is_admin_returns_true_for_admin_group():
-    assert middleware.is_admin(_event(groups="[admin]")) is True
-
-
-def test_is_admin_returns_false_for_non_admin():
-    assert middleware.is_admin(_event(groups="[editor]")) is False
+def test_is_admin_returns_false():
+    assert middleware.is_admin(_event(is_admin=False)) is False
 
 
 def test_get_request_id_extracts_from_context():
