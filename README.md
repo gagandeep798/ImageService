@@ -93,3 +93,8 @@ Unit tests use `moto` to mock all AWS services in-process. Handler tests cover a
 > **Nginx reverse proxy** — only Nginx exposes a host port. Upstream service ports are container-internal only. Security headers are applied to all responses. Custom error pages (no stack traces or version info) at `docker/nginx/error_pages/`. Upstream ports are injected via `envsubst` from `docker/nginx/templates/default.conf.template` at container start — all port values come from `docker/.env`.
 
 ImageService is a production-grade, Instagram-style image upload backend built on AWS Lambda, S3, and DynamoDB. It supports chunked multipart uploads, an async processing pipeline (AV scan → thumbnails), paginated listing with write-sharded DynamoDB GSIs, GDPR erasure, and full observability via CloudWatch, X-Ray, and OpenSearch.
+
+## Infrastructure
+
+All AWS resources are defined in `template.yaml` (AWS SAM). Parameterised by `Env` (local/dev/staging/prod).
+**DynamoDB tables:** images (with UserImagesIndex + StatusIndex GSIs), users, migrations, secret-hashes — all with PITR and TTL.

@@ -1,0 +1,148 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Description: Production-grade image upload service (Lambda + S3 + DynamoDB)
+
+Parameters:
+  Env:
+    Type: String
+    Default: local
+    AllowedValues: [local, dev, staging, prod]
+  LogLevel:
+    Type: String
+    Default: INFO
+    AllowedValues: [DEBUG, INFO, WARNING, ERROR]
+  ServiceVersion:
+    Type: String
+    Default: "0.1.0"
+
+Globals:
+  Function:
+    Runtime: python3.12
+    MemorySize: 512
+    Timeout: 30
+    Architectures: [x86_64]
+    Tracing: Active
+    Environment:
+      Variables:
+        ENV: !Ref Env
+        LOG_LEVEL: !Ref LogLevel
+        SERVICE_VERSION: !Ref ServiceVersion
+        AWS_DEFAULT_REGION: !Ref AWS::Region
+        POWERTOOLS_SERVICE_NAME: image-service
+        POWERTOOLS_LOG_LEVEL: !Ref LogLevel
+        IMAGES_TABLE_NAME: !Ref ImagesTable
+        USERS_TABLE_NAME: !Ref UsersTable
+        MIGRATIONS_TABLE_NAME: !Ref MigrationsTable
+        SECRET_HASHES_TABLE_NAME: !Ref SecretHashesTable
+        ORIGINALS_BUCKET: !Ref OriginalsBucket
+        THUMBNAILS_BUCKET: !Ref ThumbnailsBucket
+        QUARANTINE_BUCKET: !Ref QuarantineBucket
+        LOGS_BUCKET: !Ref LogsBucket
+        FINALIZE_QUEUE_URL: !Ref FinalizeQueue
+        SCAN_QUEUE_URL: !Ref ScanQueue
+        THUMBNAIL_QUEUE_URL: !Ref ThumbnailQueue
+        OPENSEARCH_INDEX_PREFIX: image-service
+        DYNAMO_GSI2_SHARD_COUNT: "8"
+        MAX_IMAGE_SIZE_BYTES: "20971520"
+        CHUNK_SIZE_BYTES: "5242880"
+        UPLOAD_URL_TTL_SECONDS: "900"
+        DOWNLOAD_URL_TTL_SECONDS: "3600"
+
+# ── Conditions ────────────────────────────────────────────────────────────────
+Conditions:
+  IsProd: !Equals [!Ref Env, prod]
+  IsNotLocal: !Not [!Equals [!Ref Env, local]]
+
+Resources:
+
+  # ── DynamoDB Tables ──────────────────────────────────────────────────────────
+
+  ImagesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "image-service-images-${Env}"
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      AttributeDefinitions:
+        - {AttributeName: PK, AttributeType: S}
+        - {AttributeName: SK, AttributeType: S}
+        - {AttributeName: GSI1PK, AttributeType: S}
+        - {AttributeName: GSI1SK, AttributeType: S}
+        - {AttributeName: GSI2PK, AttributeType: S}
+        - {AttributeName: GSI2SK, AttributeType: S}
+      KeySchema:
+        - {AttributeName: PK, KeyType: HASH}
+        - {AttributeName: SK, KeyType: RANGE}
+      GlobalSecondaryIndexes:
+        - IndexName: UserImagesIndex
+          KeySchema:
+            - {AttributeName: GSI1PK, KeyType: HASH}
+            - {AttributeName: GSI1SK, KeyType: RANGE}
+          Projection: {ProjectionType: ALL}
+        - IndexName: StatusIndex
+          KeySchema:
+            - {AttributeName: GSI2PK, KeyType: HASH}
+            - {AttributeName: GSI2SK, KeyType: RANGE}
+          Projection:
+            ProjectionType: INCLUDE
+            NonKeyAttributes: [user_id, title, s3_key, content_type, size_bytes]
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "image-service-users-${Env}"
+      BillingMode: PAY_PER_REQUEST
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      AttributeDefinitions:
+        - {AttributeName: PK, AttributeType: S}
+        - {AttributeName: SK, AttributeType: S}
+        - {AttributeName: EmailHashIndex_PK, AttributeType: S}
+      KeySchema:
+        - {AttributeName: PK, KeyType: HASH}
+        - {AttributeName: SK, KeyType: RANGE}
+      GlobalSecondaryIndexes:
+        - IndexName: EmailHashIndex
+          KeySchema:
+            - {AttributeName: EmailHashIndex_PK, KeyType: HASH}
+          Projection: {ProjectionType: KEYS_ONLY}
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  MigrationsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "image-service-migrations-${Env}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: PK, AttributeType: S}
+        - {AttributeName: SK, AttributeType: S}
+      KeySchema:
+        - {AttributeName: PK, KeyType: HASH}
+        - {AttributeName: SK, KeyType: RANGE}
+
+  SecretHashesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "image-service-secret-hashes-${Env}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - {AttributeName: PK, AttributeType: S}
+        - {AttributeName: SK, AttributeType: S}
+      KeySchema:
+        - {AttributeName: PK, KeyType: HASH}
+        - {AttributeName: SK, KeyType: RANGE}
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
