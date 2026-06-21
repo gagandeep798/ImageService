@@ -105,3 +105,12 @@ All AWS resources are defined in `template.yaml` (AWS SAM). Parameterised by `En
 **Processing Lambda functions:** ScanComplete, GenerateThumbnails (both SQS-triggered).
 **API Lambda functions:** GetImage, ListImages, DeleteImage, Download, Health (unauthenticated), GdprDeleteUser (300s timeout).
 **Operational Lambda functions:** LogShipper (Kinesis), SlackNotifier (SNS), ScaleLambda (EventBridge), BackupSecrets (daily cron).
+
+## Architecture
+
+```
+Client → API Gateway (WAF + JWT Authorizer) → Lambda → DynamoDB / S3
+                                                      → SQS → finalize → scan → thumbnails
+CloudFront ← S3 originals (OAC)
+Kinesis ← CloudWatch Logs → log_shipper Lambda → OpenSearch
+```

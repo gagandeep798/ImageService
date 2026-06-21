@@ -824,3 +824,70 @@ Resources:
               Action: [secretsmanager:ListSecrets, secretsmanager:GetSecretValue]
               Resource: "*"
 
+  # ── API Gateway ───────────────────────────────────────────────────────────────
+
+  ImageApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub "image-service-api-${Env}"
+      StageName: v1
+      TracingEnabled: true
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt CognitoUserPool.Arn
+            Identity:
+              Header: Authorization
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          ThrottlingBurstLimit: 1000
+          ThrottlingRateLimit: 500
+          LoggingLevel: INFO
+          DataTraceEnabled: false
+          MetricsEnabled: true
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiGatewayLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength","integrationLatency":"$context.integrationLatency"}'
+
+  # ── Cognito ───────────────────────────────────────────────────────────────────
+
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "image-service-${Env}"
+      AutoVerifiedAttributes: [email]
+      UsernameAttributes: [email]
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: image-service-app
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      TokenValidityUnits:
+        AccessToken: hours
+        RefreshToken: days
+      AccessTokenValidity: 1
+      RefreshTokenValidity: 30
+
+  # ── Kinesis ───────────────────────────────────────────────────────────────────
+
+  LiveLogsStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: !Sub "image-service-live-logs-${Env}"
+      ShardCount: 2
+      RetentionPeriodHours: 24
+
