@@ -556,3 +556,64 @@ Resources:
               Action: [secretsmanager:GetSecretValue]
               Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
+  ScanCompleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-scan-complete-${Env}"
+      CodeUri: src/
+      Handler: handlers.scan_complete.handler
+      Events:
+        SQSTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ScanQueue.Arn
+            BatchSize: 10
+      Policies:
+        - SQSPollerPolicy:
+            QueueName: !GetAtt ScanQueue.QueueName
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref ImagesTable
+        - Statement:
+            - Effect: Allow
+              Action: [s3:CopyObject, s3:DeleteObject]
+              Resource:
+                - !Sub "${OriginalsBucket.Arn}/*"
+                - !Sub "${QuarantineBucket.Arn}/*"
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+
+  GenerateThumbnailsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-generate-thumbnails-${Env}"
+      CodeUri: src/
+      Handler: handlers.generate_thumbnails.handler
+      MemorySize: 1024
+      Timeout: 120
+      Events:
+        SQSTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ThumbnailQueue.Arn
+            BatchSize: 5
+      Policies:
+        - SQSPollerPolicy:
+            QueueName: !GetAtt ThumbnailQueue.QueueName
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref ImagesTable
+        - Statement:
+            - Effect: Allow
+              Action: [s3:GetObject]
+              Resource: !Sub "${OriginalsBucket.Arn}/*"
+            - Effect: Allow
+              Action: [s3:PutObject]
+              Resource: !Sub "${ThumbnailsBucket.Arn}/*"
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+

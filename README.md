@@ -102,3 +102,4 @@ All AWS resources are defined in `template.yaml` (AWS SAM). Parameterised by `En
 **SQS queues:** FinalizeQueue → FinalizeDLQ, ScanQueue → ScanDLQ, ThumbnailQueue — all with DLQ redrive after 3 failures.
 **IAM roles:** DynamoDBReadRole (GetItem/Query/Scan), DynamoDBWriteRole (PutItem/UpdateItem), DynamoDBDeleteRole (UpdateItem restricted to soft-delete fields only).
 **Upload Lambda functions:** UploadInitiate, UploadPart, UploadComplete, UploadAbort, FinalizeUpload (SQS, 1024MB, 60s).
+**Processing Lambda functions:** ScanComplete, GenerateThumbnails (both SQS-triggered).
