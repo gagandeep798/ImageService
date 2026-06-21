@@ -122,3 +122,9 @@ Kinesis ← CloudWatch Logs → log_shipper Lambda → OpenSearch
 make deploy-staging   # sam deploy → migrate → smoke test
 make deploy-prod      # same + manual GitHub approval gate
 ```
+
+**Running locally:**
+```bash
+make build      # sam build --use-container
+make start-api  # SAM local API on http://localhost:3000
+```
