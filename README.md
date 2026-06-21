@@ -103,3 +103,4 @@ All AWS resources are defined in `template.yaml` (AWS SAM). Parameterised by `En
 **IAM roles:** DynamoDBReadRole (GetItem/Query/Scan), DynamoDBWriteRole (PutItem/UpdateItem), DynamoDBDeleteRole (UpdateItem restricted to soft-delete fields only).
 **Upload Lambda functions:** UploadInitiate, UploadPart, UploadComplete, UploadAbort, FinalizeUpload (SQS, 1024MB, 60s).
 **Processing Lambda functions:** ScanComplete, GenerateThumbnails (both SQS-triggered).
+**API Lambda functions:** GetImage, ListImages, DeleteImage, Download, Health (unauthenticated), GdprDeleteUser (300s timeout).

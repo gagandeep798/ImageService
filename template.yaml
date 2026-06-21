@@ -617,3 +617,148 @@ Resources:
               Action: [secretsmanager:GetSecretValue]
               Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
 
+  GetImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-get-image-${Env}"
+      CodeUri: src/
+      Handler: handlers.get_image.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /images/{image_id}
+            Method: GET
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        - Statement:
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+
+  ListImagesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-list-images-${Env}"
+      CodeUri: src/
+      Handler: handlers.list_images.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /images
+            Method: GET
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        - Statement:
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+
+  DeleteImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-delete-image-${Env}"
+      CodeUri: src/
+      Handler: handlers.delete_image.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /images/{image_id}
+            Method: DELETE
+      Policies:
+        # Read: to fetch the image record and verify ownership
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        # Delete: STS assume-role to get the delete-tier resource
+        - Statement:
+            - Effect: Allow
+              Action: sts:AssumeRole
+              Resource: !GetAtt DynamoDBDeleteRole.Arn
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+
+  DownloadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-download-${Env}"
+      CodeUri: src/
+      Handler: handlers.download.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /images/{image_id}/download
+            Method: GET
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        - Statement:
+            - Effect: Allow
+              Action: [s3:GetObject]
+              Resource: !Sub "${OriginalsBucket.Arn}/*"
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-health-${Env}"
+      CodeUri: src/
+      Handler: handlers.health.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /health
+            Method: GET
+            Auth:
+              Authorizer: NONE
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        - Statement:
+            - Effect: Allow
+              Action: [s3:HeadBucket]
+              Resource: !Sub "${OriginalsBucket.Arn}"
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+
+  GdprDeleteUserFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-gdpr-delete-user-${Env}"
+      CodeUri: src/
+      Handler: handlers.gdpr_delete_user.handler
+      Timeout: 300
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /users/{user_id}
+            Method: DELETE
+      Policies:
+        # Read: paginate the user's images via UserImagesIndex
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        # Delete: STS assume-role for both tables (images + users)
+        - Statement:
+            - Effect: Allow
+              Action: sts:AssumeRole
+              Resource: !GetAtt DynamoDBDeleteRole.Arn
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+
