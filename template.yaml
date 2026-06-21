@@ -261,3 +261,59 @@ Resources:
                 StorageClass: GLACIER
             ExpirationInDays: 2555
 
+  # ── SQS Queues ───────────────────────────────────────────────────────────────
+
+  FinalizeDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "image-service-finalize-dlq-${Env}"
+      MessageRetentionPeriod: 1209600  # 14 days
+
+  FinalizeQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "image-service-finalize-${Env}"
+      VisibilityTimeout: 60
+      MessageRetentionPeriod: 86400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt FinalizeDLQ.Arn
+        maxReceiveCount: 3
+
+  ScanDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "image-service-scan-dlq-${Env}"
+
+  ScanQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "image-service-scan-${Env}"
+      VisibilityTimeout: 120
+      MessageRetentionPeriod: 86400
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ScanDLQ.Arn
+        maxReceiveCount: 3
+
+  ThumbnailQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "image-service-thumbnails-${Env}"
+      VisibilityTimeout: 120
+      MessageRetentionPeriod: 86400
+
+  # SQS policy to allow S3 to send messages
+  FinalizeQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref FinalizeQueue]
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt FinalizeQueue.Arn
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub "arn:aws:s3:::image-service-originals-${AWS::AccountId}-${AWS::Region}-${Env}"
+
