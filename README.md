@@ -100,3 +100,4 @@ All AWS resources are defined in `template.yaml` (AWS SAM). Parameterised by `En
 **DynamoDB tables:** images (with UserImagesIndex + StatusIndex GSIs), users, migrations, secret-hashes — all with PITR and TTL.
 **S3 buckets:** originals (lifecycle: IA@30d, Glacier@180d, abort incomplete multipart@7d), thumbnails, quarantine (SSE-KMS), logs.
 **SQS queues:** FinalizeQueue → FinalizeDLQ, ScanQueue → ScanDLQ, ThumbnailQueue — all with DLQ redrive after 3 failures.
+**IAM roles:** DynamoDBReadRole (GetItem/Query/Scan), DynamoDBWriteRole (PutItem/UpdateItem), DynamoDBDeleteRole (UpdateItem restricted to soft-delete fields only).

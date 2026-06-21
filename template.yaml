@@ -317,3 +317,102 @@ Resources:
               ArnLike:
                 aws:SourceArn: !Sub "arn:aws:s3:::image-service-originals-${AWS::AccountId}-${AWS::Region}-${Env}"
 
+  # ── DynamoDB Access-Tier IAM Roles ───────────────────────────────────────────
+  # Three separate IAM roles enforce least-privilege at the AWS level.
+  # Each Lambda function assumes only the role(s) it needs.
+  # Role ARNs are stored in Secrets Manager (image-service/{env}/dynamodb)
+  # so dynamo.py can STS-assume them at cold-start.
+
+  DynamoDBReadRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "image-service-dynamo-read-${Env}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DynamoDBReadOnly
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:BatchGetItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:DescribeTable
+                Resource:
+                  - !GetAtt ImagesTable.Arn
+                  - !Sub "${ImagesTable.Arn}/index/*"
+                  - !GetAtt UsersTable.Arn
+                  - !Sub "${UsersTable.Arn}/index/*"
+
+  DynamoDBWriteRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "image-service-dynamo-write-${Env}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DynamoDBWriteOnly
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:BatchWriteItem
+                Resource:
+                  - !GetAtt ImagesTable.Arn
+                  - !GetAtt UsersTable.Arn
+                # Deny updating the soft-delete fields — those belong to the delete role
+                Condition:
+                  "ForAllValues:StringNotEquals":
+                    "dynamodb:Attributes": ["status", "deleted_at", "gdpr_erased_at", "ttl"]
+
+  DynamoDBDeleteRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "image-service-dynamo-delete-${Env}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DynamoDBSoftDeleteOnly
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:UpdateItem
+                Resource:
+                  - !GetAtt ImagesTable.Arn
+                  - !GetAtt UsersTable.Arn
+                # Restrict UpdateItem to only the soft-delete attribute set
+                Condition:
+                  "ForAllValues:StringEquals":
+                    "dynamodb:Attributes":
+                      - PK
+                      - SK
+                      - status
+                      - deleted_at
+                      - gdpr_erased_at
+                      - ttl
+                      - GSI2PK
+                      - updated_at
+
