@@ -1028,3 +1028,18 @@ Outputs:
   ApiUrl:
     Description: API Gateway URL
     Value: !Sub "https://${ImageApi}.execute-api.${AWS::Region}.amazonaws.com/v1"
+
+  ImagesTableName:
+    Value: !Ref ImagesTable
+
+  UsersTableName:
+    Value: !Ref UsersTable
+
+  OriginalsBucketName:
+    Value: !Ref OriginalsBucket
+
+  CognitoUserPoolId:
+    Value: !Ref CognitoUserPool
+
+  CognitoAppClientId:
+    Value: !Ref CognitoUserPoolClient

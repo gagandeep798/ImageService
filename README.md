@@ -115,3 +115,10 @@ CloudFront ← S3 originals (OAC)
 Kinesis ← CloudWatch Logs → log_shipper Lambda → OpenSearch
 ```
 **Observability:** CloudWatch alarms (per-service + composite), SNS alerts topic, CloudTrail with S3 data events, Athena workgroup with saved queries.
+
+## Deploy
+
+```bash
+make deploy-staging   # sam deploy → migrate → smoke test
+make deploy-prod      # same + manual GitHub approval gate
+```
