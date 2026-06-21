@@ -891,3 +891,140 @@ Resources:
       ShardCount: 2
       RetentionPeriodHours: 24
 
+  # ── CloudWatch Log Groups ─────────────────────────────────────────────────────
+
+  ApiGatewayLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/apigateway/image-service-${Env}"
+      RetentionInDays: !If [IsProd, 30, 7]
+
+  # ── SNS Topic for Alerts ──────────────────────────────────────────────────────
+
+  AlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub "image-service-alerts-${Env}"
+
+  # ── CloudWatch Alarms ─────────────────────────────────────────────────────────
+
+  UploadFailedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "image-service-upload-failed-${Env}"
+      MetricName: upload.failed
+      Namespace: ImageService
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlertsTopic]
+
+  DynamoConnectionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "image-service-dynamodb-connection-errors-${Env}"
+      MetricName: dynamodb.connection_errors
+      Namespace: ImageService
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlertsTopic]
+
+  FinalizeDLQAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "image-service-FinalizeDLQ-${Env}"
+      MetricName: ApproximateNumberOfMessagesVisible
+      Namespace: AWS/SQS
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt FinalizeDLQ.QueueName
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlertsTopic]
+
+  ScanThreatAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "image-service-scan-threat-detected-${Env}"
+      MetricName: scan.threat_detected
+      Namespace: ImageService
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlertsTopic]
+
+  SecretUnexpectedChangeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "image-service-secrets-unexpected-change-${Env}"
+      MetricName: secrets.unexpected_change
+      Namespace: ImageService
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlertsTopic]
+
+  ApiGateway5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "image-service-api-5xx-${Env}"
+      MetricName: 5XXError
+      Namespace: AWS/ApiGateway
+      Dimensions:
+        - Name: ApiName
+          Value: !Sub "image-service-api-${Env}"
+      Statistic: Average
+      Period: 120
+      EvaluationPeriods: 2
+      Threshold: 0.01
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlertsTopic]
+
+  # ── Athena ────────────────────────────────────────────────────────────────────
+
+  AthenaWorkgroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: !Sub "image-service-analysis-${Env}"
+      WorkGroupConfiguration:
+        ResultConfiguration:
+          OutputLocation: !Sub "s3://${LogsBucket}/athena-results/"
+          EncryptionConfiguration:
+            EncryptionOption: SSE_S3
+        EnforceWorkGroupConfiguration: true
+        BytesScannedCutoffPerQuery: 10737418240  # 10 GB
+
+  SlowUploadsQuery:
+    Type: AWS::Athena::NamedQuery
+    Properties:
+      WorkGroup: !Ref AthenaWorkgroup
+      Name: slow_uploads
+      Database: image_service_logs
+      QueryString: |
+        SELECT DATE_TRUNC('day', from_iso8601_timestamp(timestamp)) AS day,
+               APPROX_PERCENTILE(duration_ms, 0.99) AS p99_latency_ms,
+               COUNT(*) AS total
+        FROM image_service_lambda_logs
+        WHERE function_name LIKE '%upload%'
+          AND year = YEAR(CURRENT_DATE)
+          AND month = MONTH(CURRENT_DATE)
+        GROUP BY 1 ORDER BY 1 DESC;
+
+# ── Outputs ───────────────────────────────────────────────────────────────────
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway URL
+    Value: !Sub "https://${ImageApi}.execute-api.${AWS::Region}.amazonaws.com/v1"

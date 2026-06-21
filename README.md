@@ -114,3 +114,4 @@ Client → API Gateway (WAF + JWT Authorizer) → Lambda → DynamoDB / S3
 CloudFront ← S3 originals (OAC)
 Kinesis ← CloudWatch Logs → log_shipper Lambda → OpenSearch
 ```
+**Observability:** CloudWatch alarms (per-service + composite), SNS alerts topic, CloudTrail with S3 data events, Athena workgroup with saved queries.
