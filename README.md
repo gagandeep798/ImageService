@@ -104,3 +104,4 @@ All AWS resources are defined in `template.yaml` (AWS SAM). Parameterised by `En
 **Upload Lambda functions:** UploadInitiate, UploadPart, UploadComplete, UploadAbort, FinalizeUpload (SQS, 1024MB, 60s).
 **Processing Lambda functions:** ScanComplete, GenerateThumbnails (both SQS-triggered).
 **API Lambda functions:** GetImage, ListImages, DeleteImage, Download, Health (unauthenticated), GdprDeleteUser (300s timeout).
+**Operational Lambda functions:** LogShipper (Kinesis), SlackNotifier (SNS), ScaleLambda (EventBridge), BackupSecrets (daily cron).
