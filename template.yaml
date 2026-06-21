@@ -416,3 +416,143 @@ Resources:
                       - GSI2PK
                       - updated_at
 
+  # ── Lambda Functions ──────────────────────────────────────────────────────────
+
+  UploadInitiateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-upload-initiate-${Env}"
+      CodeUri: src/
+      Handler: handlers.upload_initiate.handler
+      ReservedConcurrentExecutions: 50
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /images
+            Method: POST
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref ImagesTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref UsersTable
+        - Statement:
+            - Effect: Allow
+              Action: [s3:CreateMultipartUpload]
+              Resource: !Sub "${OriginalsBucket.Arn}/*"
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+
+  UploadPartFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-upload-part-${Env}"
+      CodeUri: src/
+      Handler: handlers.upload_part.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /images/{image_id}/parts
+            Method: POST
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref ImagesTable
+        - Statement:
+            - Effect: Allow
+              Action: [s3:UploadPart]
+              Resource: !Sub "${OriginalsBucket.Arn}/*"
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+
+  UploadCompleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-upload-complete-${Env}"
+      CodeUri: src/
+      Handler: handlers.upload_complete.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /images/{image_id}/complete
+            Method: POST
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref ImagesTable
+        - Statement:
+            - Effect: Allow
+              Action: [s3:CompleteMultipartUpload]
+              Resource: !Sub "${OriginalsBucket.Arn}/*"
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+
+  UploadAbortFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-upload-abort-${Env}"
+      CodeUri: src/
+      Handler: handlers.upload_abort.handler
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ImageApi
+            Path: /images/{image_id}/upload
+            Method: DELETE
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref ImagesTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref UsersTable
+        - Statement:
+            - Effect: Allow
+              Action: [s3:AbortMultipartUpload]
+              Resource: !Sub "${OriginalsBucket.Arn}/*"
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+
+  FinalizeUploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "image-service-finalize-upload-${Env}"
+      CodeUri: src/
+      Handler: handlers.finalize_upload.handler
+      MemorySize: 1024
+      Timeout: 60
+      ReservedConcurrentExecutions: 100
+      Events:
+        SQSTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt FinalizeQueue.Arn
+            BatchSize: 5
+            FunctionResponseTypes: [ReportBatchItemFailures]
+      Policies:
+        - SQSPollerPolicy:
+            QueueName: !GetAtt FinalizeQueue.QueueName
+        - DynamoDBWritePolicy:
+            TableName: !Ref ImagesTable
+        - DynamoDBWritePolicy:
+            TableName: !Ref UsersTable
+        - Statement:
+            - Effect: Allow
+              Action: [s3:GetObject, s3:HeadObject]
+              Resource: !Sub "${OriginalsBucket.Arn}/*"
+            - Effect: Allow
+              Action: [secretsmanager:GetSecretValue]
+              Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:image-service/${Env}/*"
+
