@@ -141,3 +141,9 @@ Every pull request runs a full CI pipeline before merging.
 
 Merging to `main` automatically deploys to staging; production requires manual approval in GitHub.
 Deploy pipeline: staging → run migrations → smoke test /health → manual approval → prod.
+
+## Operational Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/init_localstack.sh` | Creates all AWS resources inside LocalStack at startup |
