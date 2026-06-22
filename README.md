@@ -157,3 +157,4 @@ make localstack-up    # start all services
 make seed             # seed test data
 make start-api        # SAM local API on http://localhost:3000
 ```
+| `scripts/gdpr_erase_user.py` | Operator CLI for out-of-band GDPR erasure |
