@@ -140,3 +140,4 @@ Every pull request runs a full CI pipeline before merging.
 - Integration tests with LocalStack
 
 Merging to `main` automatically deploys to staging; production requires manual approval in GitHub.
+Deploy pipeline: staging → run migrations → smoke test /health → manual approval → prod.
