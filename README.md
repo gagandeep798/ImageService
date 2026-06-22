@@ -134,3 +134,4 @@ make start-api  # SAM local API on http://localhost:3000
 Every pull request runs a full CI pipeline before merging.
 **CI pipeline:**
 - Lint (ruff)
+- Type check (mypy)
