@@ -147,3 +147,4 @@ Deploy pipeline: staging → run migrations → smoke test /health → manual ap
 | Script | Purpose |
 |--------|---------|
 | `scripts/init_localstack.sh` | Creates all AWS resources inside LocalStack at startup |
+| `scripts/fetch_secrets.sh` | Pulls Secrets Manager values → .env.secrets files |
