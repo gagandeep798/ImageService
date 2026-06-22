@@ -132,3 +132,5 @@ make start-api  # SAM local API on http://localhost:3000
 ## CI/CD
 
 Every pull request runs a full CI pipeline before merging.
+**CI pipeline:**
+- Lint (ruff)
