@@ -136,3 +136,4 @@ Every pull request runs a full CI pipeline before merging.
 - Lint (ruff)
 - Type check (mypy)
 - Unit tests (≥80% coverage)
+- SAM build
