@@ -177,3 +177,10 @@ if [ -n "$POOL_ID" ]; then
     log "Cognito User Pool: $POOL_ID"
 fi
 
+# ── Run DynamoDB Migrations ───────────────────────────────────────────────────
+if command -v python3 &>/dev/null && [ -f /app/migrations/runner.py ]; then
+    python3 /app/migrations/runner.py --env local
+    log "Migrations applied"
+fi
+
+log "LocalStack init complete"
