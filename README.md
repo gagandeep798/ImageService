@@ -138,3 +138,5 @@ Every pull request runs a full CI pipeline before merging.
 - Unit tests (≥80% coverage)
 - SAM build
 - Integration tests with LocalStack
+
+Merging to `main` automatically deploys to staging; production requires manual approval in GitHub.

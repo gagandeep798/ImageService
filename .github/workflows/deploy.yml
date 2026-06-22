@@ -1,0 +1,39 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.12"
+  DEPLOY_LOG_GROUP: /image-service/cicd/deploys
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.STAGING_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install Poetry
+        run: pip install poetry==1.8.3
+      - name: Install dependencies
+        run: poetry install
+      - name: Build
+        run: sam build --use-container
+      - name: Deploy to Staging
+        run: sam deploy --config-env staging --no-fail-on-empty-changeset
