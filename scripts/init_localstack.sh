@@ -125,3 +125,10 @@ done
 
 log "SQS queues ready"
 
+# ── Kinesis Stream ────────────────────────────────────────────────────────────
+aws --endpoint-url="$ENDPOINT" kinesis create-stream \
+    --stream-name image-service-live-logs \
+    --shard-count 2 \
+    --region "$REGION" 2>/dev/null || true
+log "Kinesis stream ready"
+
