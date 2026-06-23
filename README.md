@@ -173,3 +173,9 @@ make dashboards-open  # open OpenSearch Dashboards
 | [Observability](docs/services/observability.md) | Logs, metrics, tracing, CloudTrail, Athena, OpenSearch |
 | [Security](docs/services/security.md) | Auth, WAF, VPC, Secrets Manager, IAM, PII |
 | [Infrastructure](docs/services/infrastructure.md) | SAM template, DynamoDB schema, S3 buckets, SQS, Kinesis |
+
+### Activities
+| Doc | What it covers |
+|-----|----------------|
+| [Local Development](docs/activities/local-development.md) | First-time setup, running the stack, seeding data |
+| [Deploying](docs/activities/deploying.md) | Staging and production deploy workflow |
