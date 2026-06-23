@@ -170,3 +170,6 @@ make dashboards-open  # open OpenSearch Dashboards
 | [Image Service](docs/services/image-service.md) | Metadata CRUD, listing, download |
 | [User Service](docs/services/user-service.md) | User management, quota, PII hashing |
 | [Processing Pipeline](docs/services/processing-pipeline.md) | Finalize → scan → thumbnail generation |
+| [Observability](docs/services/observability.md) | Logs, metrics, tracing, CloudTrail, Athena, OpenSearch |
+| [Security](docs/services/security.md) | Auth, WAF, VPC, Secrets Manager, IAM, PII |
+| [Infrastructure](docs/services/infrastructure.md) | SAM template, DynamoDB schema, S3 buckets, SQS, Kinesis |
