@@ -183,3 +183,6 @@ make dashboards-open  # open OpenSearch Dashboards
 | [Debugging with OpenSearch](docs/activities/debugging-with-opensearch.md) | Live log queries, index structure, common searches |
 | [GDPR Erasure](docs/activities/gdpr-erasure.md) | Handling right-to-erasure requests |
 | [Incident Response](docs/activities/incident-response.md) | Alert routing, runbook index, escalation path |
+
+### Runbooks
+`runbooks/` — operational incident response procedures for DLQ messages, DynamoDB throttling, Lambda errors, user quota, GDPR erasure, S3 replication lag, and OpenSearch log queries.
