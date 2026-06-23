@@ -168,3 +168,5 @@ make dashboards-open  # open OpenSearch Dashboards
 |-----|----------------|
 | [Upload Service](docs/services/upload-service.md) | Chunked multipart upload flow, resume, abort |
 | [Image Service](docs/services/image-service.md) | Metadata CRUD, listing, download |
+| [User Service](docs/services/user-service.md) | User management, quota, PII hashing |
+| [Processing Pipeline](docs/services/processing-pipeline.md) | Finalize → scan → thumbnail generation |
