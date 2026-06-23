@@ -160,3 +160,11 @@ make start-api        # SAM local API on http://localhost:3000
 | `scripts/gdpr_erase_user.py` | Operator CLI for out-of-band GDPR erasure |
 
 make dashboards-open  # open OpenSearch Dashboards
+
+## Documentation
+
+### Services
+| Doc | What it covers |
+|-----|----------------|
+| [Upload Service](docs/services/upload-service.md) | Chunked multipart upload flow, resume, abort |
+| [Image Service](docs/services/image-service.md) | Metadata CRUD, listing, download |
