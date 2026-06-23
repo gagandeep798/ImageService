@@ -179,3 +179,5 @@ make dashboards-open  # open OpenSearch Dashboards
 |-----|----------------|
 | [Local Development](docs/activities/local-development.md) | First-time setup, running the stack, seeding data |
 | [Deploying](docs/activities/deploying.md) | Staging and production deploy workflow |
+| [Database Migrations](docs/activities/migrations.md) | Writing, applying, and rolling back DynamoDB migrations |
+| [Debugging with OpenSearch](docs/activities/debugging-with-opensearch.md) | Live log queries, index structure, common searches |
